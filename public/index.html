@@ -2,7 +2,7 @@
 <head>
    <meta charset="utf-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <title>WebGPU</title>
+   <title>Tygrak's Point Renderer</title>
    <meta name="description" content="">
    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -10,7 +10,6 @@
 <body>
    <div class="grid">
       <div class="item1">
-         <!--<h1>WebGPU</h1><br>-->
          <div>
             <button id="dataLoadButton">Load Data</button>
             <input type="file" id="dataFileInput" name="dataFileInput" accept=".data,.txt,.pdb,.pdb1,.pdb2,.pcd,.obj">
@@ -22,7 +21,9 @@
          <div>
             <button class="collapsible" onclick="ToggleAdditionalOptions(this)">Additional Options</button>
             <div class="content" id="additionalOptions">
-               <label><input id="canvasSizeCheckbox" type="checkbox" name="options" value="fixed">Use Fixed Canvas Size</label>   
+               <label><input id="canvasSizeCheckbox" type="checkbox" name="options" value="fixed">Use Fixed Canvas Size</label>
+               <br>   
+               <label><input id="drawAxesCheckbox" type="checkbox" name="options" value="fixed" checked>Draw Axes</label>
             </div>
          </div>  
       </div>

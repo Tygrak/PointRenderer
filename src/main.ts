@@ -12,6 +12,8 @@ const createCamera = require('3d-view-controls');
 const dataLoadButton = document.getElementById("dataLoadButton") as HTMLButtonElement;
 const dataFileInput = document.getElementById("dataFileInput") as HTMLInputElement;
 
+const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
+
 const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
 const overlayMessageElement = document.getElementById("overlayMessage") as HTMLParagraphElement;
 
@@ -130,6 +132,7 @@ async function Initialize() {
             dataImpostorRenderer.LoadPoints(device, points);
             let t1 = performance.now();
             console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+            console.log("(" + points.length + " points)");
         });
     };
 
@@ -216,7 +219,9 @@ async function Initialize() {
         
         renderPass.setPipeline(basicPipeline);
         renderPass.setBindGroup(0, basicUniformBindGroup);
-        axisMesh.DrawStructure(renderPass, mvpMatrix);
+        if (drawAxesCheckbox.checked) {
+            axisMesh.DrawStructure(renderPass, mvpMatrix);
+        }
 
         renderPass.end();
 
