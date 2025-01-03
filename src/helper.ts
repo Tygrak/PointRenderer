@@ -117,8 +117,14 @@ export function CreateTimestampBuffer(device: GPUDevice, capacity: number = 8) {
     return {queryBuffer, querySet, capacity}; 
 }
 
-export function CheckWebGPU() {
-    if (!navigator.gpu) {
+export async function CheckWebGPU() {
+    let available = navigator.gpu != undefined;
+    try {
+        const webGpu = await navigator.gpu?.requestAdapter();
+    } catch {
+        available = false;
+    }
+    if (!available) {
         const notSupportedElement = document.getElementById("overlayNotSupportedWebGPU") as HTMLParagraphElement;
         let result = `
         <br>Your current browser does not support WebGPU! The application requires WebGPU to function.

@@ -12,6 +12,7 @@ const createCamera = require('3d-view-controls');
 const dataLoadButton = document.getElementById("dataLoadButton") as HTMLButtonElement;
 const dataFileInput = document.getElementById("dataFileInput") as HTMLInputElement;
 
+const sliderImpostorSizeScale = document.getElementById("impostorSizeScale") as HTMLInputElement;
 const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
 
 const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
@@ -213,7 +214,7 @@ async function Initialize() {
             let vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
             let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
             let drawAmount = 1;
-            let sizeScale = 1;
+            let sizeScale = parseFloat(sliderImpostorSizeScale.value);
             dataImpostorRenderer.Draw(device, renderPass, vpMatrix, vImpostorMatrix, cameraPosition, drawAmount, sizeScale);
         }
         

@@ -19,7 +19,7 @@ export class ImpostorRenderer {
     drawSettingsBindGroup : GPUBindGroup;
     
     constructor (device: GPUDevice, format: GPUTextureFormat) {
-        let quad = CreateQuadGeometry(new Point(0, 0, 0));
+        let quad = CreateQuadGeometry(new Point(0, 0, 0, 0, 1, 0));
         this.quadPositions = CreateGPUBuffer(device, quad.positions);
         this.quadColors = CreateGPUBuffer(device, quad.color);
         this.quadInfos = CreateGPUBuffer(device, quad.info);
@@ -150,9 +150,9 @@ export class ImpostorRenderer {
                 colors[vertex*3+i*18+0] = quad.color[vertex*3+0];
                 colors[vertex*3+i*18+1] = quad.color[vertex*3+1];
                 colors[vertex*3+i*18+2] = quad.color[vertex*3+2];
-                infos[vertex*3+i*18+0] = quad.info[vertex*3+0];
-                infos[vertex*3+i*18+1] = quad.info[vertex*3+1];
-                infos[vertex*3+i*18+2] = quad.info[vertex*3+2];
+                infos[vertex*3+i*18+0] = point.normal[0];
+                infos[vertex*3+i*18+1] = point.normal[1];
+                infos[vertex*3+i*18+2] = point.normal[2];
             }
         }
         this.quadPositions = CreateGPUBuffer(device, positions);
