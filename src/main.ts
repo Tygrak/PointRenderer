@@ -14,6 +14,8 @@ const dataFileInput = document.getElementById("dataFileInput") as HTMLInputEleme
 
 const sliderImpostorSizeScale = document.getElementById("impostorSizeScale") as HTMLInputElement;
 const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
+const normalizeSizeCheckbox = document.getElementById("normalizeSizeCheckbox") as HTMLInputElement;
+const rotateLightCheckbox = document.getElementById("rotateLightCheckbox") as HTMLInputElement;
 
 const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
 const overlayMessageElement = document.getElementById("overlayMessage") as HTMLParagraphElement;
@@ -128,7 +130,7 @@ async function Initialize() {
         
         let t0 = performance.now();
         LoadData(dataFileInput.files[0], (text: string) => {
-            let points = LoadDataObj(text, 1);
+            let points = LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
             dataImpostorRenderer = new ImpostorRenderer(device, gpu.format);
             dataImpostorRenderer.LoadPoints(device, points);
             let t1 = performance.now();
@@ -183,6 +185,9 @@ async function Initialize() {
     let previousFrameDeltaTimesMs: number[] = new Array<number>(60).fill(15);
     let frameId = 0;
 
+    let startTime = 0;
+    startTime = performance.now();
+
     function draw() {
         if (!document.hasFocus()) {
             return;
@@ -215,6 +220,9 @@ async function Initialize() {
             let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
             let drawAmount = 1;
             let sizeScale = parseFloat(sliderImpostorSizeScale.value);
+            if (rotateLightCheckbox.checked) {
+                dataImpostorRenderer.lightDir = [Math.sin((performance.now()-startTime)/1000.0), 1, Math.cos((performance.now()-startTime)/1000.0)];
+            }
             dataImpostorRenderer.Draw(device, renderPass, vpMatrix, vImpostorMatrix, cameraPosition, drawAmount, sizeScale);
         }
         

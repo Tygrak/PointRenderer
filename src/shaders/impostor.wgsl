@@ -4,9 +4,10 @@
 
 struct DrawSettings {
     amount : f32,
-    start : f32,
     pad1 : f32,
+    pad2 : f32,
     atomScale : f32,
+    lightDir : vec4<f32>,
 }
 @binding(0) @group(1) var<uniform> drawSettings : DrawSettings;
 
@@ -15,6 +16,7 @@ struct VertexOutput {
     @location(0) color : vec4<f32>,
     @location(1) uv : vec2<f32>,
     @location(2) worldPos : vec4<f32>,
+    @location(3) normal : vec3<f32>
 };
 
 @vertex
@@ -43,7 +45,8 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     }
     output.worldPos = output.position;
     output.position = mvpMatrix * output.position;
-    output.color = color*0+vec4(normal, 1);
+    output.color = color;
+    output.normal = normal;
     return output;
 }
 
@@ -52,12 +55,29 @@ struct FragmentOutput {
     @location(0) color: vec4<f32>
 }
 
+const lightColor = vec3(1, 1, 1);
+const ambientColor = vec3(0.01, 0.01, 0.01);
+const shininess = 32.0;
+
+fn blinnPhong(position : vec4<f32>, viewDir : vec4<f32>, color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
+    let lightDir = normalize(drawSettings.lightDir);
+
+    let lambertian = max(dot(lightDir.xyz, normal), 0.0);
+    var specular = 0.0;
+
+    if (lambertian > 0.0) {
+        let halfDir = normalize(lightDir + normalize(viewDir));
+        let specAngle = max(dot(halfDir.xyz, normal), 0.0);
+        specular = pow(specAngle, shininess);
+    }
+    return vec4(ambientColor + color.rgb * lambertian * lightColor + color.rgb * specular * lightColor, 1.0);
+}
+
 @fragment
-fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32>, @location(1) uv: vec2<f32>, @location(2) worldPos: vec4<f32>) -> FragmentOutput {
+fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32>, @location(1) uv: vec2<f32>, @location(2) worldPos: vec4<f32>, @location(3) normal: vec3<f32>) -> FragmentOutput {
     var output: FragmentOutput;
-    output.color = color;
     let amount = drawSettings.amount;
-    if (amount > 0) {
+    if (amount < 0) {
         output.color.b = output.color.b*1.1; 
     }
     let dist = pow(uv.x*2-1.0, 2)+pow(uv.y*2-1.0, 2);
@@ -66,6 +86,9 @@ fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32
     }
     var pos = worldPos;//-vec4(0, 0, 1, 0)*vMatrix*drawSettings.atomScale;
     pos = mvpMatrix * pos;
+    output.color = color*0+vec4(normal, 1)+vec4(0,0,dist,0);
+    output.color = blinnPhong(position, worldPos-cameraPos, color, normal);
+    //output.color = vec4(distance(worldPos, cameraPos)/40, 0, 0, 1);
     output.depth = position.z;
     return output;
 }

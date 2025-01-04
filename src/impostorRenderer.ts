@@ -6,6 +6,7 @@ import { Point } from "./point";
 
 export class ImpostorRenderer {
     pointsCount : number = 1;
+    lightDir = [0.2, 1, 0];
     quadPositions : GPUBuffer;
     quadColors : GPUBuffer;
     quadNormals : GPUBuffer;
@@ -16,7 +17,7 @@ export class ImpostorRenderer {
     cameraPosBuffer : GPUBuffer;
     uniformBindGroup : GPUBindGroup;
 
-    atomDrawLimitBuffer : GPUBuffer;
+    drawSettingsBuffer : GPUBuffer;
     drawSettingsBindGroup : GPUBindGroup;
     
     constructor (device: GPUDevice, format: GPUTextureFormat) {
@@ -128,8 +129,8 @@ export class ImpostorRenderer {
             ]
         });
 
-        this.atomDrawLimitBuffer = device.createBuffer({
-            size: 16,
+        this.drawSettingsBuffer = device.createBuffer({
+            size: 32,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         this.drawSettingsBindGroup = device.createBindGroup({
@@ -138,7 +139,7 @@ export class ImpostorRenderer {
                 {
                     binding: 0,
                     resource: {
-                        buffer: this.atomDrawLimitBuffer,
+                        buffer: this.drawSettingsBuffer,
                     }
                 },
             ]
@@ -174,13 +175,20 @@ export class ImpostorRenderer {
     }
 
     public Draw(device: GPUDevice, renderPass : GPURenderPassEncoder, mvpMatrix: mat4, vMatrix: mat4, cameraPos: vec3, percentageShown: number, sizeScale: number) {
-        let drawSettings = vec4.fromValues(Math.round(percentageShown*this.pointsCount), Math.round(0), 1.0, sizeScale);
-
         device.queue.writeBuffer(this.mvpUniformBuffer, 0, mvpMatrix as ArrayBuffer);
         device.queue.writeBuffer(this.vUniformBuffer, 0, vMatrix as ArrayBuffer);
         device.queue.writeBuffer(this.cameraPosBuffer, 0, vec4.fromValues(cameraPos[0], cameraPos[1], cameraPos[2], 1.0) as ArrayBuffer);
 
-        device.queue.writeBuffer(this.atomDrawLimitBuffer, 0, drawSettings as ArrayBuffer);
+        let drawSettingsBuffer = new Float32Array(8);
+        drawSettingsBuffer[0] = Math.round(percentageShown*this.pointsCount);
+        drawSettingsBuffer[1] = 0;
+        drawSettingsBuffer[2] = 0;
+        drawSettingsBuffer[3] = sizeScale;
+        drawSettingsBuffer[4] = this.lightDir[0];
+        drawSettingsBuffer[5] = this.lightDir[1];
+        drawSettingsBuffer[6] = this.lightDir[2];
+        drawSettingsBuffer[7] = 0;
+        device.queue.writeBuffer(this.drawSettingsBuffer, 0, drawSettingsBuffer as ArrayBuffer);
 
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.uniformBindGroup);
