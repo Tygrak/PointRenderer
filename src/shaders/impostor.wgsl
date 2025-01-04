@@ -18,7 +18,7 @@ struct VertexOutput {
 };
 
 @vertex
-fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) atomInfo: vec2<f32>) -> VertexOutput {
+fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) normal: vec3<f32>, @location(3) size: f32) -> VertexOutput {
     let mvp = mvpMatrix;
     let v = vMatrix;
     let cPos = cameraPos;
@@ -26,7 +26,8 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     let cameraUp = vec4(0, 1, 0, 0)*vMatrix;
     var output: VertexOutput;
     output.position = pos;
-    let scale = drawSettings.atomScale*atomInfo.y;
+    let temp = normal.x;
+    let scale = drawSettings.atomScale*size+temp*0;
     if (index%6 == 0) {
         output.position = pos + cameraRight*(-0.5)*scale + cameraUp*(-0.5)*scale;
         output.uv = vec2(0, 0);
@@ -42,7 +43,7 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     }
     output.worldPos = output.position;
     output.position = mvpMatrix * output.position;
-    output.color = color;
+    output.color = color*0+vec4(normal, 1);
     return output;
 }
 

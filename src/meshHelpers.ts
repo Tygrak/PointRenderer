@@ -269,7 +269,8 @@ export function CreateQuadGeometry(point: Point) {
         ...i,
         ...i,
     ]);
-    return {positions: resultPositions, color: resultColors, info: atomInfo};
+    let sizes = new Float32Array([1, 1]);
+    return {positions: resultPositions, color: resultColors, info: atomInfo, sizes: sizes};
 }
 
 // https://www.songho.ca/opengl/gl_sphere.html
