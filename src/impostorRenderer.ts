@@ -6,6 +6,7 @@ import { Point } from "./point";
 
 export class ImpostorRenderer {
     pointsCount : number = 1;
+    drawMode = 1;
     lightDir = [0.2, 1, 0];
     quadPositions : GPUBuffer;
     quadColors : GPUBuffer;
@@ -181,7 +182,7 @@ export class ImpostorRenderer {
 
         let drawSettingsBuffer = new Float32Array(8);
         drawSettingsBuffer[0] = Math.round(percentageShown*this.pointsCount);
-        drawSettingsBuffer[1] = 0;
+        drawSettingsBuffer[1] = this.drawMode;
         drawSettingsBuffer[2] = 0;
         drawSettingsBuffer[3] = sizeScale;
         drawSettingsBuffer[4] = this.lightDir[0];
