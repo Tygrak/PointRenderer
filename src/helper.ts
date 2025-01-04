@@ -82,11 +82,12 @@ export async function InitGPU(fixedCanvas: boolean) {
     try {
         device = await adapter?.requestDevice({
             requiredFeatures: ["timestamp-query"],
+            requiredLimits: {"maxBufferSize" : 536870912} //536870912 -- half gigabyte
         }) as GPUDevice;
         timestampsEnabled = true;
         console.log("Created device with timestamps enabled");
     } catch {
-        device = await adapter?.requestDevice() as GPUDevice;
+        device = await adapter?.requestDevice({requiredLimits: {"maxBufferSize" : 536870912}}) as GPUDevice;
         console.log("Created device with timestamps disabled, performance tracking won't be available.");
         console.log("Launch chrome with this command line option to enable: '--disable-dawn-features=disallow_unsafe_apis'");
     }
@@ -182,3 +183,19 @@ export function LoadData(dataFile: File, callback: Function) {
     }
     reader.readAsText(dataFile, "UTF-8");
 }
+
+export function LoadDataArrayBuffer(dataFile: File, callback: Function) {
+    let reader = new FileReader();
+    reader.onload = function (result) {
+        if (result.target == null) {
+            return;
+        }
+        let arrayBuffer = result.target.result;
+        callback(arrayBuffer);
+    }
+    reader.onerror = function (e) {
+        throw ("Loading the data file failed.");
+    }
+    reader.readAsArrayBuffer(dataFile);
+}
+

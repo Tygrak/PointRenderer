@@ -12,7 +12,7 @@
       <div class="item1">
          <div>
             <button id="dataLoadButton">Load Data</button>
-            <input type="file" id="dataFileInput" name="dataFileInput" accept=".data,.txt,.pdb,.pdb1,.pdb2,.pcd,.obj">
+            <input type="file" id="dataFileInput" name="dataFileInput" accept=".data,.txt,.ply,.pcd,.obj">
          </div>
          <div>
             <p id="fpsCounter">10fps</p>
@@ -30,7 +30,19 @@
                <label><input id="rotateLightCheckbox" type="checkbox" name="options" value="fixed">Rotate Light</label>
                <br>
                <div class="slidecontainer">
-                  <label><input type="range" min="0.1" max="2.5" step="0.1" value="1" class="slider" id="impostorSizeScale">Point Size Scale</label>
+                  <label><input type="range" min="0.1" max="2.5" step="0.1" value="1" class="slider" id="impostorSizeScaleSlider">Point Size Scale</label>
+               </div>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.0" max="6.284" step="0.001" value="0" class="slider" id="modelRotateXSlider">Model Rotate X</label>
+               </div>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.0" max="6.284" step="0.001" value="0" class="slider" id="modelRotateYSlider">Model Rotate Y</label>
+               </div>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.0" max="6.284" step="0.001" value="0" class="slider" id="modelRotateZSlider">Model Rotate Z</label>
                </div>
             </div>
          </div>  

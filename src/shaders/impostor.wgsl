@@ -5,7 +5,7 @@
 struct DrawSettings {
     amount : f32,
     drawMode : f32,
-    pad2 : f32,
+    billboardMode : f32,
     atomScale : f32,
     lightDir : vec4<f32>,
 }
@@ -34,7 +34,7 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     let scale = drawSettings.atomScale*size+temp*0;
     var offsetRight = cameraRight;
     var offsetUp = cameraUp;
-    if (drawSettings.drawMode == 0) {
+    if (drawSettings.billboardMode == 0) {
         offsetRight = normalize(vec4(cross(normal, vec3(-normal.x, -normal.y, normal.z+1)), 0));
         offsetUp = normalize(vec4(cross(normal, offsetRight.xyz), 0));
     }
@@ -66,14 +66,16 @@ const shininess = 64.0;
 fn blinnPhong(position : vec4<f32>, viewDir : vec4<f32>, color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
     let lightDir = normalize(drawSettings.lightDir);
 
-    let lambertian = max(dot(lightDir.xyz, normal), 0.0);
+    let ndotl = dot(lightDir.xyz, normal);
     var specular = 0.0;
 
-    if (lambertian > 0.0) {
+    if (ndotl > 0.0) {
         let halfDir = normalize(lightDir + normalize(viewDir));
         let specAngle = max(saturate(dot(halfDir.xyz, normal)), 0.0);
         specular = pow(specAngle, shininess);
     }
+    //half lambert
+    let lambertian = saturate((ndotl+1)/2);
     return vec4(ambientColor + color.rgb * lambertian * lightColor + color.rgb * specular * lightColor, 1.0);
 }
 
@@ -93,10 +95,9 @@ fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32
     if (dist > 1.0) {
         discard;
     }
-    var pos = worldPos;//-vec4(0, 0, 1, 0)*vMatrix*drawSettings.atomScale;
-    pos = mvpMatrix * pos;
-    output.color = color*0+vec4(normal, 1)+vec4(0,0,dist,0);
-    output.color = blinnPhong(position, cameraPos-worldPos, color, normal);
+    var pos = mvpMatrix * worldPos;//-vec4(0, 0, 1, 0)*vMatrix*drawSettings.atomScale;
+    //output.color = color*0+vec4(normal, 1);
+    output.color = blinnPhong(pos, cameraPos-pos, color, normal);
     //output.color = vec4(middlePos.z/1000, middlePos.z/1000, middlePos.z/1000, 1);
     //output.color = vec4((distance(middlePos, worldPos)+distance(middlePos, cameraPos))/position.w, (distance(middlePos, worldPos)+distance(middlePos, cameraPos))/100, (distance(middlePos, worldPos)+distance(middlePos, cameraPos))/10, 1);
     //output.color = vec4(position.w/2, position.w, position.w*10, 1);

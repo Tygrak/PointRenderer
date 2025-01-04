@@ -1,18 +1,22 @@
-import { InitGPU, CreateGPUBuffer, CreateTransforms, CreateViewProjection, CreateTimestampBuffer, LoadData} from './helper';
+import { InitGPU, CreateGPUBuffer, CreateTransforms, CreateViewProjection, CreateTimestampBuffer, LoadData, LoadDataArrayBuffer} from './helper';
 import shader from './shaders/basic.wgsl';
 import "./site.css";
 import { vec3, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
 import { ImpostorRenderer } from './impostorRenderer';
 import { AxisMesh } from './axisMesh';
-import { LoadDataObj } from './loadData';
+import { LoadDataObj, LoadDataPly } from './loadData';
+import { Point } from './point';
 
 const createCamera = require('3d-view-controls');
 
 const dataLoadButton = document.getElementById("dataLoadButton") as HTMLButtonElement;
 const dataFileInput = document.getElementById("dataFileInput") as HTMLInputElement;
 
-const sliderImpostorSizeScale = document.getElementById("impostorSizeScale") as HTMLInputElement;
+const sliderImpostorSizeScaleSlider = document.getElementById("impostorSizeScaleSlider") as HTMLInputElement;
+const modelRotateXSlider = document.getElementById("modelRotateXSlider") as HTMLInputElement;
+const modelRotateYSlider = document.getElementById("modelRotateYSlider") as HTMLInputElement;
+const modelRotateZSlider = document.getElementById("modelRotateZSlider") as HTMLInputElement;
 const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
 const normalizeSizeCheckbox = document.getElementById("normalizeSizeCheckbox") as HTMLInputElement;
 const rotateLightCheckbox = document.getElementById("rotateLightCheckbox") as HTMLInputElement;
@@ -129,14 +133,26 @@ async function Initialize() {
         }
         
         let t0 = performance.now();
-        LoadData(dataFileInput.files[0], (text: string) => {
-            let points = LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
-            dataImpostorRenderer = new ImpostorRenderer(device, gpu.format);
-            dataImpostorRenderer.LoadPoints(device, points);
-            let t1 = performance.now();
-            console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
-            console.log("(" + points.length + " points)");
-        });
+        console.log(dataFileInput.files![0].name);
+        if (dataFileInput.files![0].name.includes(".obj")) {
+            LoadData(dataFileInput.files[0], (text: string) => {
+                let points = LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
+                dataImpostorRenderer = new ImpostorRenderer(device, gpu.format);
+                dataImpostorRenderer.LoadPoints(device, points);
+                let t1 = performance.now();
+                console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+                console.log("(" + points.length + " points)");
+            });
+        } else if (dataFileInput.files![0].name.includes(".ply")) {
+            LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
+                let points = LoadDataPly(buffer);
+                dataImpostorRenderer = new ImpostorRenderer(device, gpu.format);
+                dataImpostorRenderer.LoadPoints(device, points);
+                let t1 = performance.now();
+                console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+                console.log("(" + points.length + " points)");
+            });
+        }
     };
 
     let textureView = gpu.context.getCurrentTexture().createView();
@@ -202,6 +218,7 @@ async function Initialize() {
 
         let cameraPosition = camera.eye;
 
+        rotation = vec3.fromValues(parseFloat(modelRotateXSlider.value), parseFloat(modelRotateYSlider.value), parseFloat(modelRotateZSlider.value));
         CreateTransforms(modelMatrix, [0,0,0], rotation);
         mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
         device.queue.writeBuffer(uniformBuffer, 0, mvpMatrix as ArrayBuffer);
@@ -219,17 +236,17 @@ async function Initialize() {
             let vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
             let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
             let drawAmount = 1;
-            let sizeScale = parseFloat(sliderImpostorSizeScale.value);
+            let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
             if (rotateLightCheckbox.checked) {
                 dataImpostorRenderer.lightDir = [Math.sin((performance.now()-startTime)/1000.0), 1, Math.cos((performance.now()-startTime)/1000.0)];
             }
-            dataImpostorRenderer.Draw(device, renderPass, vpMatrix, vImpostorMatrix, cameraPosition, drawAmount, sizeScale);
+            dataImpostorRenderer.Draw(device, renderPass, mvpMatrix, vImpostorMatrix, cameraPosition, drawAmount, sizeScale);
         }
         
         renderPass.setPipeline(basicPipeline);
         renderPass.setBindGroup(0, basicUniformBindGroup);
         if (drawAxesCheckbox.checked) {
-            axisMesh.DrawStructure(renderPass, mvpMatrix);
+            axisMesh.DrawStructure(renderPass, vpMatrix);
         }
 
         renderPass.end();
