@@ -100,6 +100,8 @@ export class PLYLoader {
 
                         break;
 
+                    case "obj_info":
+                        break;
                     case "comment":
                         header.comments.push(line);
 

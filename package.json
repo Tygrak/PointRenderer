@@ -22,6 +22,7 @@
     "3d-view-controls": "^2.2.2",
     "css-loader": "^5.2.0",
     "gl-matrix": "^3.3.0",
+    "gltf-loader-ts": "^0.3.1",
     "jquery": "^3.6.0",
     "jshint": "^2.12.0",
     "path": "^0.12.7",

@@ -16,6 +16,7 @@ export class ImpostorRenderer {
     pipeline : GPURenderPipeline;
     mvpUniformBuffer : GPUBuffer;
     vUniformBuffer : GPUBuffer;
+    mUniformBuffer : GPUBuffer;
     cameraPosBuffer : GPUBuffer;
     uniformBindGroup : GPUBindGroup;
 
@@ -102,6 +103,11 @@ export class ImpostorRenderer {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
+        this.mUniformBuffer = device.createBuffer({
+            size: 64,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+
         this.cameraPosBuffer = device.createBuffer({
             size: 16,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
@@ -124,6 +130,12 @@ export class ImpostorRenderer {
                 },
                 {
                     binding: 2,
+                    resource: {
+                        buffer: this.mUniformBuffer,
+                    }
+                },
+                {
+                    binding: 3,
                     resource: {
                         buffer: this.cameraPosBuffer,
                     }
@@ -176,9 +188,10 @@ export class ImpostorRenderer {
         this.quadSizes = CreateGPUBuffer(device, sizes);
     }
 
-    public Draw(device: GPUDevice, renderPass : GPURenderPassEncoder, mvpMatrix: mat4, vMatrix: mat4, cameraPos: vec3, percentageShown: number, sizeScale: number) {
+    public Draw(device: GPUDevice, renderPass : GPURenderPassEncoder, mvpMatrix: mat4, vMatrix: mat4, modelMatrix: mat4, cameraPos: vec3, percentageShown: number, sizeScale: number) {
         device.queue.writeBuffer(this.mvpUniformBuffer, 0, mvpMatrix as ArrayBuffer);
         device.queue.writeBuffer(this.vUniformBuffer, 0, vMatrix as ArrayBuffer);
+        device.queue.writeBuffer(this.mUniformBuffer, 0, modelMatrix as ArrayBuffer);
         device.queue.writeBuffer(this.cameraPosBuffer, 0, vec4.fromValues(cameraPos[0], cameraPos[1], cameraPos[2], 1.0) as ArrayBuffer);
 
         let drawSettingsBuffer = new Float32Array(8);

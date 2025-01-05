@@ -5,7 +5,7 @@ import { vec3, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
 import { ImpostorRenderer } from './impostorRenderer';
 import { AxisMesh } from './axisMesh';
-import { LoadDataObj, LoadDataPly } from './loadData';
+import { LoadDataObj, LoadDataPly, LoadDataGltf } from './loadData';
 import { Point } from './point';
 
 const createCamera = require('3d-view-controls');
@@ -20,12 +20,14 @@ const modelRotateZSlider = document.getElementById("modelRotateZSlider") as HTML
 const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
 const normalizeSizeCheckbox = document.getElementById("normalizeSizeCheckbox") as HTMLInputElement;
 const rotateLightCheckbox = document.getElementById("rotateLightCheckbox") as HTMLInputElement;
+const billboardSelect = document.getElementById("billboardSelect") as HTMLSelectElement;
+const debugSelect = document.getElementById("debugSelect") as HTMLSelectElement;
 
 const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
 const overlayMessageElement = document.getElementById("overlayMessage") as HTMLParagraphElement;
 
 let axisMesh: AxisMesh;
-let dataImpostorRenderer: ImpostorRenderer;
+let impostorRenderer: ImpostorRenderer;
 
 let device: GPUDevice;
 
@@ -106,7 +108,6 @@ async function Initialize() {
     // add rotation and camera:
     let rotation = vec3.fromValues(0, 0, 0);       
     var camera = createCamera(gpu.canvas, vp.cameraOption);
-    console.log(camera);
 
     // create uniform buffer and layout
     const uniformBuffer = device.createBuffer({
@@ -137,17 +138,17 @@ async function Initialize() {
         if (dataFileInput.files![0].name.includes(".obj")) {
             LoadData(dataFileInput.files[0], (text: string) => {
                 let points = LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
-                dataImpostorRenderer = new ImpostorRenderer(device, gpu.format);
-                dataImpostorRenderer.LoadPoints(device, points);
+                impostorRenderer = new ImpostorRenderer(device, gpu.format);
+                impostorRenderer.LoadPoints(device, points);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + points.length + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".ply")) {
             LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
-                let points = LoadDataPly(buffer);
-                dataImpostorRenderer = new ImpostorRenderer(device, gpu.format);
-                dataImpostorRenderer.LoadPoints(device, points);
+                let points = LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
+                impostorRenderer = new ImpostorRenderer(device, gpu.format);
+                impostorRenderer.LoadPoints(device, points);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + points.length + " points)");
@@ -232,15 +233,17 @@ async function Initialize() {
 
         const renderPass = commandEncoder.beginRenderPass(renderPassDescription as GPURenderPassDescriptor);
 
-        if (dataImpostorRenderer != undefined) {
+        if (impostorRenderer != undefined) {
             let vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
             let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
             let drawAmount = 1;
             let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
             if (rotateLightCheckbox.checked) {
-                dataImpostorRenderer.lightDir = [Math.sin((performance.now()-startTime)/1000.0), 1, Math.cos((performance.now()-startTime)/1000.0)];
+                impostorRenderer.lightDir = [Math.sin((performance.now()-startTime)/1000.0), 1, Math.cos((performance.now()-startTime)/1000.0)];
             }
-            dataImpostorRenderer.Draw(device, renderPass, mvpMatrix, vImpostorMatrix, cameraPosition, drawAmount, sizeScale);
+            impostorRenderer.billBoardMode = parseInt(billboardSelect.value);
+            impostorRenderer.drawMode = parseInt(debugSelect.value);
+            impostorRenderer.Draw(device, renderPass, mvpMatrix, vImpostorMatrix, modelMatrix, cameraPosition, drawAmount, sizeScale);
         }
         
         renderPass.setPipeline(basicPipeline);
@@ -382,4 +385,5 @@ async function Initialize() {
 }
 
 Initialize();
+LoadDataGltf();
 

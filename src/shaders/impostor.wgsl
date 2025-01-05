@@ -1,6 +1,7 @@
 @binding(0) @group(0) var<uniform> mvpMatrix : mat4x4<f32>;
 @binding(1) @group(0) var<uniform> vMatrix : mat4x4<f32>;
-@binding(2) @group(0) var<uniform> cameraPos : vec4<f32>;
+@binding(2) @group(0) var<uniform> mMatrix : mat4x4<f32>;
+@binding(3) @group(0) var<uniform> cameraPos : vec4<f32>;
 
 struct DrawSettings {
     amount : f32,
@@ -96,8 +97,11 @@ fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32
         discard;
     }
     var pos = mvpMatrix * worldPos;//-vec4(0, 0, 1, 0)*vMatrix*drawSettings.atomScale;
-    //output.color = color*0+vec4(normal, 1);
-    output.color = blinnPhong(pos, cameraPos-pos, color, normal);
+    if (drawSettings.drawMode == 1) {
+        output.color = vec4(normal, 1);
+    } else {
+        output.color = blinnPhong(pos, cameraPos-pos, color, (mMatrix*vec4(normal, 0)).xyz);
+    }
     //output.color = vec4(middlePos.z/1000, middlePos.z/1000, middlePos.z/1000, 1);
     //output.color = vec4((distance(middlePos, worldPos)+distance(middlePos, cameraPos))/position.w, (distance(middlePos, worldPos)+distance(middlePos, cameraPos))/100, (distance(middlePos, worldPos)+distance(middlePos, cameraPos))/10, 1);
     //output.color = vec4(position.w/2, position.w, position.w*10, 1);
