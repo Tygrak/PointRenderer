@@ -36,7 +36,7 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     var offsetRight = cameraRight;
     var offsetUp = cameraUp;
     if (drawSettings.billboardMode == 0) {
-        offsetRight = normalize(vec4(cross(normal, vec3(-normal.x, -normal.y, normal.z+1)), 0));
+        offsetRight = normalize(vec4(cross(normal, vec3(-normal.x+normal.z*0.1, -normal.y+normal.x*0.1, normal.z+normal.y*0.1)), 0));
         offsetUp = normalize(vec4(cross(normal, offsetRight.xyz), 0));
     }
     if (index%6 == 0) {

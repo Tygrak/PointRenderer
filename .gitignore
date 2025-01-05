@@ -1,6 +1,7 @@
 node_modules
 testData
 /tsWebgpu
+/src/data
 /public/main.bundle.js
 /public/main.bundle.js.LICENSE.txt
 /public/main.bundle.js.map

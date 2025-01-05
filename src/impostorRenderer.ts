@@ -9,6 +9,7 @@ export class ImpostorRenderer {
     drawMode = 0;
     billBoardMode = 0;
     lightDir = [0.2, 1, 0];
+    modelMatrix : mat4 = mat4.identity(mat4.create());
     quadPositions : GPUBuffer;
     quadColors : GPUBuffer;
     quadNormals : GPUBuffer;
