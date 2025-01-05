@@ -23,9 +23,6 @@ struct VertexOutput {
 
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) normal: vec3<f32>, @location(3) size: f32) -> VertexOutput {
-    let mvp = mvpMatrix;
-    let v = vMatrix;
-    let cPos = cameraPos;
     let cameraRight = vec4(1, 0, 0, 0)*vMatrix;
     let cameraUp = vec4(0, 1, 0, 0)*vMatrix;
     var output: VertexOutput;
@@ -33,6 +30,9 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     output.middlePos = pos;
     let temp = normal.x;
     let scale = drawSettings.atomScale*size+temp*0;
+    let modelMatrixScale = vec4(length(vec3(mvpMatrix[0][0], mvpMatrix[1][0], mvpMatrix[2][0])), 
+                                length(vec3(mvpMatrix[0][1], mvpMatrix[1][1], mvpMatrix[2][1])), 
+                                length(vec3(mvpMatrix[0][2], mvpMatrix[1][2], mvpMatrix[2][2])), 1);
     var offsetRight = cameraRight;
     var offsetUp = cameraUp;
     if (drawSettings.billboardMode == 0) {
@@ -76,7 +76,10 @@ fn blinnPhong(position : vec4<f32>, viewDir : vec4<f32>, color: vec4<f32>, norma
         specular = pow(specAngle, shininess);
     }
     //half lambert
-    let lambertian = saturate((ndotl+1)/2);
+    var lambertian = saturate((ndotl+1)/2);
+    if (drawSettings.drawMode == 2) {
+        lambertian = saturate(ndotl);
+    }
     return vec4(ambientColor + color.rgb * lambertian * lightColor + color.rgb * specular * lightColor, 1.0);
 }
 
@@ -99,7 +102,7 @@ fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32
     var pos = mvpMatrix * worldPos;//-vec4(0, 0, 1, 0)*vMatrix*drawSettings.atomScale;
     if (drawSettings.drawMode == 1) {
         output.color = vec4(normal, 1);
-    } else {
+    } else { //if (drawSettings.drawMode == 0/2)
         output.color = blinnPhong(pos, cameraPos-pos, color, (mMatrix*vec4(normal, 0)).xyz);
     }
     //output.color = vec4(middlePos.z/1000, middlePos.z/1000, middlePos.z/1000, 1);

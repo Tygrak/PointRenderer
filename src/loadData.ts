@@ -7,36 +7,48 @@ import { ImpostorRenderer } from "./impostorRenderer";
 import { Node } from "gltf-loader-ts/lib/gltf";
 
 
-export const LoadDataGltf = async (device: GPUDevice, format: GPUTextureFormat) => {
+export const LoadDataGltf = async (uri: string, device: GPUDevice, format: GPUTextureFormat) => {
     let loader = new GltfLoader();
-    let uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Colored.glb';
-    //uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Textured_Complex.gltf';
     let asset = await loader.load(uri);
     let gltf = asset.gltf;
     await asset.preFetchAll();
     console.log(gltf);
     let meshesPoints: Point[][] = [];
     for (let i = 0; i < gltf.meshes!.length; i++) {
+        let points: Point[] = [];
         let mesh = gltf.meshes![i];
         for (let j = 0; j < gltf.meshes![i].primitives.length; j++) {
             let primitive = gltf.meshes![i].primitives[j];
-            let positionAccessor = primitive.attributes["POSITION"];
-            let positionData = await asset.accessorData(positionAccessor);
+            let positionAccessor = gltf.accessors![primitive.attributes["POSITION"]];
+            let positionData = await asset.accessorData(primitive.attributes["POSITION"]);
             let indicesData = await asset.accessorData(primitive.indices!);
-            console.log(mesh.name);
-            let rawVertices = ConvertBufferToNumbers(positionData, gltf.accessors![positionAccessor].componentType);
+            console.log(mesh.name + " " + j);
+            let rawVertices = ConvertBufferToNumbers(positionData, positionAccessor.componentType, positionAccessor.count*3);
             let vertices: vec3[] = [];
             for (let n = 0; n < rawVertices.length; n=n+3) {
                 vertices.push(vec3.fromValues(rawVertices[n], rawVertices[n+1], rawVertices[n+2]));
             }
-            console.log(vertices);
-            let rawIndices = ConvertBufferToNumbers(indicesData, gltf.accessors![primitive.indices!].componentType);
+            //console.log(vertices);
+            let normals: vec3[] = [];
+            if (primitive.attributes["NORMAL"] != undefined) {
+                let normalAccessor = gltf.accessors![primitive.attributes["NORMAL"]];
+                let normalData = await asset.accessorData(primitive.attributes["NORMAL"]);
+                let rawNormals = ConvertBufferToNumbers(normalData, normalAccessor.componentType, normalAccessor.count*3);
+                for (let n = 0; n < rawNormals.length; n=n+3) {
+                    normals.push(vec3.fromValues(rawNormals[n], rawNormals[n+1], rawNormals[n+2]));
+                }
+            }
+            let rawIndices = ConvertBufferToNumbers(indicesData, gltf.accessors![primitive.indices!].componentType, gltf.accessors![primitive.indices!].count);
             let faces: number[][] = [];
             for (let n = 0; n < rawIndices.length; n=n+3) {
+                if (rawIndices[n] >= vertices.length || rawIndices[n+1] >= vertices.length || rawIndices[n+2] >= vertices.length) {
+                    continue;
+                }
                 faces.push([rawIndices[n], rawIndices[n+1], rawIndices[n+2]]);
             }
-            meshesPoints.push(GetPointsFromVerticesAndIndices(vertices, faces, false, false));
+            points.push(...GetPointsFromVerticesAndIndices(vertices, faces, false, false, [], normals));
         }
+        meshesPoints.push(points);
     }
 
     const ConvertNodeToRenderers = (node: Node, modelMatrix: mat4) => {
@@ -79,7 +91,7 @@ export const LoadDataGltf = async (device: GPUDevice, format: GPUTextureFormat) 
     return impostorRenderers; 
 }
 
-export const ConvertBufferToNumbers = (buffer: Uint8Array, componentType: number) => {
+export const ConvertBufferToNumbers = (buffer: Uint8Array, componentType: number, count: number) => {
     let numbers: number[] = [];
     let view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     /*
@@ -91,27 +103,27 @@ export const ConvertBufferToNumbers = (buffer: Uint8Array, componentType: number
     5126 | float | Signed | 32
     */
     if (componentType == 5120) {
-        for (let i = 0; i < buffer.length; i++) {
+        for (let i = 0; i < buffer.length && i < count; i++) {
             numbers.push(view.getInt8(i));
         }
     } else if (componentType == 5121) {
-        for (let i = 0; i < buffer.length; i++) {
+        for (let i = 0; i < buffer.length && i < count; i++) {
             numbers.push(view.getUint8(i));
         }
     } else if (componentType == 5122) {
-        for (let i = 0; i < buffer.length; i+=2) {
+        for (let i = 0; i < buffer.length && i < count*2; i+=2) {
             numbers.push(view.getInt16(i, true));
         }
     } else if (componentType == 5123) {
-        for (let i = 0; i < buffer.length; i+=2) {
+        for (let i = 0; i < buffer.length && i < count*2; i+=2) {
             numbers.push(view.getUint16(i, true));
         }
     } else if (componentType == 5125) {
-        for (let i = 0; i < buffer.length; i+=4) {
+        for (let i = 0; i < buffer.length && i < count*4; i+=4) {
             numbers.push(view.getUint32(i, true));
         }
     } else if (componentType == 5126) {
-        for (let i = 0; i < buffer.length; i+=4) {
+        for (let i = 0; i < buffer.length && i < count*4; i+=4) {
             numbers.push(view.getFloat32(i, true));
         }
     }
@@ -217,7 +229,7 @@ export const GetPointsFromVerticesAndNormals = (vertices: vec3[], normals: vec3[
     return points;
 }
 
-export const GetPointsFromVerticesAndIndices = (vertices: vec3[], faces: number[][], moveToOrigin = true,  normalizeSize = true, colors: vec3[] = []) => {
+export const GetPointsFromVerticesAndIndices = (vertices: vec3[], faces: number[][], moveToOrigin = true,  normalizeSize = true, colors: vec3[] = [], normals: vec3[] = []) => {
     let points : Point[] = [];
     let limitMaxSize = 0;
     if (moveToOrigin) {
@@ -241,6 +253,9 @@ export const GetPointsFromVerticesAndIndices = (vertices: vec3[], faces: number[
             point.r = colors[faces[i][0]][0];
             point.g = colors[faces[i][0]][1];
             point.b = colors[faces[i][0]][2];
+        }
+        if (normals.length > faces[i][0]) {
+            point.normal = normals[faces[i][0]];
         }
         if (points.length > 10000000) {
             console.log("too many points, stopping");

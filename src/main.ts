@@ -24,6 +24,7 @@ const billboardSelect = document.getElementById("billboardSelect") as HTMLSelect
 const debugSelect = document.getElementById("debugSelect") as HTMLSelectElement;
 
 const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
+const pointsCounterElement = document.getElementById("pointsCounter") as HTMLParagraphElement;
 const overlayMessageElement = document.getElementById("overlayMessage") as HTMLParagraphElement;
 
 let axisMesh: AxisMesh;
@@ -170,8 +171,10 @@ async function Initialize() {
         let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
         let drawAmount = 1;
         let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
+        let pointsCount = 0;
         for (let i = 0; i < impostorRenderers.length; i++) {
             let impostorRenderer = impostorRenderers[i];
+            pointsCount += impostorRenderer.pointsCount;
             let modelMatrix = impostorRenderer.modelMatrix;
             if (impostorRenderers.length == 1) {
                 CreateModelMatrix(modelMatrix, [0,0,0], rotation);
@@ -198,6 +201,7 @@ async function Initialize() {
         
         device.queue.submit([commandEncoder.finish()]);
         
+        pointsCounterElement.innerText = pointsCount.toFixed(0) + " points";
         //read query buffer with timestamps
         if (gpu.timestampsEnabled) {
             const size = timestampBuffers.queryBuffer.size;
@@ -320,7 +324,12 @@ async function Initialize() {
 
     CreateAnimation(draw);
     
-    impostorRenderers = await LoadDataGltf(device, gpu.format);
+    let uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Colored.glb';
+    //uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Textured_Complex.gltf';
+    uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
+    //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/ABeautifulGame/glTF/ABeautifulGame.gltf';
+    //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/Sponza/glTF/Sponza.gltf';
+    impostorRenderers = await LoadDataGltf(uri, device, gpu.format);
 }
 
 Initialize();
