@@ -325,8 +325,8 @@ async function Initialize() {
     CreateAnimation(draw);
     
     let uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Colored.glb';
-    //uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Textured_Complex.gltf';
-    uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
+    uri = 'https://raw.githubusercontent.com/GraphicsProgramming/deccer-cubes/refs/heads/main/SM_Deccer_Cubes_Textured_Complex.gltf';
+    //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/ABeautifulGame/glTF/ABeautifulGame.gltf';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/Sponza/glTF/Sponza.gltf';
     impostorRenderers = await LoadDataGltf(uri, device, gpu.format);

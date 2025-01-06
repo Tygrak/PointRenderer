@@ -2,7 +2,7 @@ import { mat4, quat, vec3 } from "gl-matrix";
 import { Point } from "./point";
 import { PLYLoader } from './plyLoader';
 import { GltfLoader } from "gltf-loader-ts";
-import { CreateModelMatrix } from "./helper";
+import { CreateModelMatrix, lerp } from "./helper";
 import { ImpostorRenderer } from "./impostorRenderer";
 import { Node } from "gltf-loader-ts/lib/gltf";
 
@@ -229,6 +229,47 @@ export const GetPointsFromVerticesAndNormals = (vertices: vec3[], normals: vec3[
     return points;
 }
 
+export const GeneratePointsWithinTriangle = (vertices: vec3[], colors: vec3[] = [], normals: vec3[] = []) => {
+    let points : Point[] = [];
+    const v0 = vertices[0];
+    const v1 = vertices[1];
+    const v2 = vertices[2];
+    const a = vec3.sub([0,0,0], v1, v0);
+    const b = vec3.sub([0,0,0], v2, v0);
+    const computedNormal = vec3.normalize([0,0,0], vec3.cross([0,0,0], a, b));
+    const n0 = normals.length > 0 ? normals[0] : computedNormal;
+    const n1 = normals.length > 1 ? normals[1] : computedNormal;
+    const n2 = normals.length > 2 ? normals[2] : computedNormal;
+    const c0 = colors.length > 0 ? colors[0] : vec3.fromValues(1, 1, 1);
+    const c1 = colors.length > 1 ? colors[1] : vec3.fromValues(1, 1, 1);
+    const c2 = colors.length > 2 ? colors[2] : vec3.fromValues(1, 1, 1);
+    let aDist = vec3.dist(v1, v0);
+    let bDist = vec3.dist(v2, v0);
+    for (let i = 0; i < aDist; i+=0.25) {
+        if (aDist < 0.25) {
+            i = aDist/2;
+        }
+        const ta = i/aDist;
+        const va = vec3.fromValues(lerp(v1[0], v0[0], ta), lerp(v1[1], v0[1], ta), lerp(v1[2], v0[2], ta));
+        const na = vec3.fromValues(lerp(n1[0], n0[0], ta), lerp(n1[1], n0[1], ta), lerp(n1[2], n0[2], ta));
+        const ca = vec3.fromValues(lerp(c1[0], c0[0], ta), lerp(c1[1], c0[1], ta), lerp(c1[2], c0[2], ta));
+        for (let j = 0; j < bDist; j+=0.25) {
+            if (bDist < 0.25) {
+                j = bDist/2;
+            }
+            const tb = j/bDist;
+            let position = vec3.fromValues(lerp(v2[0], va[0], tb), lerp(v2[1], va[1], tb), lerp(v2[2], va[2], tb));
+            let normal = vec3.fromValues(lerp(n2[0], na[0], tb), lerp(n2[1], na[1], tb), lerp(n2[2], na[2], tb));
+            let color = vec3.fromValues(lerp(c2[0], ca[0], tb), lerp(c2[1], ca[1], tb), lerp(c2[2], ca[2], tb));
+            let point = new Point(position[0], position[1], position[2], normal[0], normal[1], normal[2]);
+            point.r = color[0]; point.g = color[1]; point.b = color[2];
+            point.size = 0.5;
+            points.push(point);
+        }
+    }
+    return points;
+}
+
 export const GetPointsFromVerticesAndIndices = (vertices: vec3[], faces: number[][], moveToOrigin = true,  normalizeSize = true, colors: vec3[] = [], normals: vec3[] = []) => {
     let points : Point[] = [];
     let limitMaxSize = 0;
@@ -238,6 +279,7 @@ export const GetPointsFromVerticesAndIndices = (vertices: vec3[], faces: number[
     if (normalizeSize) {
         NormalizeVerticesSize(vertices);
     }
+    const defaultColor = vec3.fromValues(0.9, 0.9, 0.9);
     for (let i = 0; i < faces.length; i++) {
         const v0 = vertices[faces[i][0]];
         const v1 = vertices[faces[i][1]];
@@ -247,17 +289,48 @@ export const GetPointsFromVerticesAndIndices = (vertices: vec3[], faces: number[
         const normal = vec3.normalize([0,0,0], vec3.cross([0,0,0], a, b));
         let barycenter = vec3.fromValues((v0[0]+v1[0]+v2[0])/3, (v0[1]+v1[1]+v2[1])/3, (v0[2]+v1[2]+v2[2])/3);
         let point = new Point(barycenter[0], barycenter[1], barycenter[2], normal[0], normal[1], normal[2]);
-        let dist = Math.max(vec3.dist(v0, barycenter), vec3.dist(v1, barycenter), vec3.dist(v2, barycenter));
+        let distToCenter0 = vec3.dist(v0, barycenter);
+        let distToCenter1 = vec3.dist(v1, barycenter);
+        let distToCenter2 = vec3.dist(v2, barycenter);
+        let dist = Math.max(distToCenter0, distToCenter1, distToCenter2);
         point.size = dist*1.9;
+        let c0 = defaultColor;
+        let c1 = defaultColor;
+        let c2 = defaultColor;
         if (colors.length > faces[i][0]) {
-            point.r = colors[faces[i][0]][0];
-            point.g = colors[faces[i][0]][1];
-            point.b = colors[faces[i][0]][2];
+			c0 = colors[faces[i][0]];
+			c1 = colors[faces[i][1]];
+			c2 = colors[faces[i][2]];
+            point.r = (c0[0]+c1[0]+c2[0])/3;
+            point.g = (c0[1]+c1[1]+c2[1])/3;
+            point.b = (c0[2]+c1[2]+c2[2])/3;
         }
         if (normals.length > faces[i][0]) {
-            point.normal = normals[faces[i][0]];
+			const n0 = normals[faces[i][0]];
+			const n1 = normals[faces[i][1]];
+			const n2 = normals[faces[i][2]];
+            point.size = dist*1.0;
+            point.normal = vec3.fromValues((n0[0]+n1[0]+n2[0])/3, (n0[1]+n1[1]+n2[1])/3, (n0[2]+n1[2]+n2[2])/3);
+			if (distToCenter0 > 0.5) {
+				let point0 = new Point((v0[0]+barycenter[0])/2, (v0[1]+barycenter[1])/2, (v0[2]+barycenter[2])/2, (point.normal[0]+n0[0])/2, (point.normal[1]+n0[1])/2, (point.normal[2]+n0[2])/2);
+				point0.r = (point.r+c0[0])/2; point0.g = (point.g+c0[1])/2; point0.b = (point.b+c0[2])/2;
+                point0.size = distToCenter0;
+				points.push(point0);
+			}
+			if (distToCenter1 > 0.5) {
+				let point1 = new Point((v1[0]+barycenter[0])/2, (v1[1]+barycenter[1])/2, (v1[2]+barycenter[2])/2, (point.normal[0]+n1[0])/2, (point.normal[1]+n1[1])/2, (point.normal[2]+n1[2])/2);
+				point1.r = (point.r+c1[0])/2; point1.g = (point.g+c1[1])/2; point1.b = (point.b+c1[2])/2;
+                point1.size = distToCenter1;
+				points.push(point1);
+			}
+			if (distToCenter2 > 0.5) {
+				let point2 = new Point((v2[0]+barycenter[0])/2, (v2[1]+barycenter[1])/2, (v2[2]+barycenter[2])/2, (point.normal[0]+n2[0])/2, (point.normal[1]+n2[1])/2, (point.normal[2]+n2[2])/2);
+				point2.r = (point.r+c2[0])/2; point2.g = (point.g+c2[1])/2; point2.b = (point.b+c2[2])/2;
+                point2.size = distToCenter2;
+				points.push(point2);
+			}
         }
-        if (points.length > 10000000) {
+        if (points.length > 12000000) {
             console.log("too many points, stopping");
             break;
         }

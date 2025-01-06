@@ -102,6 +102,11 @@ export async function InitGPU(fixedCanvas: boolean) {
     return{ device, canvas, format, context, timestampsEnabled };
 };
 
+
+export function lerp(x: number, y: number, t: number){
+    return (1-t)*x+t*y;
+}
+
 export function CreateTimestampBuffer(device: GPUDevice, capacity: number = 8) {
     capacity = Math.floor(8); //Max number of timestamps we can store
     let querySet = device.createQuerySet({
