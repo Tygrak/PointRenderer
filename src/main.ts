@@ -5,7 +5,7 @@ import { vec3, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
 import { ImpostorRenderer } from './impostorRenderer';
 import { AxisMesh } from './axisMesh';
-import { LoadDataObj, LoadDataPly, LoadDataGltf } from './loadData';
+import { DataLoader } from './loadData';
 import { Point } from './point';
 
 const createCamera = require('3d-view-controls');
@@ -17,6 +17,7 @@ const sliderImpostorSizeScaleSlider = document.getElementById("impostorSizeScale
 const modelRotateXSlider = document.getElementById("modelRotateXSlider") as HTMLInputElement;
 const modelRotateYSlider = document.getElementById("modelRotateYSlider") as HTMLInputElement;
 const modelRotateZSlider = document.getElementById("modelRotateZSlider") as HTMLInputElement;
+const maxPointsSplitSlider = document.getElementById("maxPointsSplitSlider") as HTMLInputElement;
 const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
 const normalizeSizeCheckbox = document.getElementById("normalizeSizeCheckbox") as HTMLInputElement;
 const rotateLightCheckbox = document.getElementById("rotateLightCheckbox") as HTMLInputElement;
@@ -62,6 +63,8 @@ async function Initialize() {
     let rotation = vec3.fromValues(0, 0, 0);       
     var camera = createCamera(gpu.canvas, vp.cameraOption);
 
+    let dataLoader = new DataLoader(device, gpu.format);
+
     dataLoadButton.onclick = (e) => {
         if (dataFileInput.files == null || dataFileInput.files?.length == 0) {
             console.log("No file selected!");
@@ -70,9 +73,11 @@ async function Initialize() {
         
         let t0 = performance.now();
         console.log(dataFileInput.files![0].name);
+        dataLoader.MaxTrianglePoints = parseInt(maxPointsSplitSlider.value);
+
         if (dataFileInput.files![0].name.includes(".obj")) {
             LoadData(dataFileInput.files[0], (text: string) => {
-                let points = LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
+                let points = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
                 let impostorRenderer = new ImpostorRenderer(device, gpu.format);
                 impostorRenderer.LoadPoints(device, points);
                 impostorRenderers = [impostorRenderer];
@@ -82,7 +87,7 @@ async function Initialize() {
             });
         } else if (dataFileInput.files![0].name.includes(".ply")) {
             LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
-                let points = LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
+                let points = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
                 let impostorRenderer = new ImpostorRenderer(device, gpu.format);
                 impostorRenderer.LoadPoints(device, points);
                 impostorRenderers = [impostorRenderer];
@@ -329,7 +334,7 @@ async function Initialize() {
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/ABeautifulGame/glTF/ABeautifulGame.gltf';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/Sponza/glTF/Sponza.gltf';
-    impostorRenderers = await LoadDataGltf(uri, device, gpu.format);
+    impostorRenderers = await dataLoader.LoadDataGltf(uri);
 }
 
 Initialize();

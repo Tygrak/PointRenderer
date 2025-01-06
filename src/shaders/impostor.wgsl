@@ -35,7 +35,7 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
                                 length(vec3(mvpMatrix[0][2], mvpMatrix[1][2], mvpMatrix[2][2])), 1);
     var offsetRight = cameraRight;
     var offsetUp = cameraUp;
-    if (drawSettings.billboardMode == 0) {
+    if (drawSettings.billboardMode != 1) {
         offsetRight = normalize(vec4(cross(normal, vec3(-normal.x+normal.z*0.1, -normal.y+normal.x*0.1, normal.z+normal.y*0.1)), 0));
         offsetUp = normalize(vec4(cross(normal, offsetRight.xyz), 0));
     }
@@ -96,19 +96,22 @@ fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32
         output.color.b = output.color.b*1.1; 
     }
     let dist = pow(uv.x*2-1.0, 2)+pow(uv.y*2-1.0, 2);
-    if (dist > 1.0) {
+    if (drawSettings.billboardMode != 2 && dist > 1.0) {
         discard;
     }
+    let n = normalize((mMatrix*vec4(normal, 0)).xyz);
     var pos = mvpMatrix * worldPos;//-vec4(0, 0, 1, 0)*vMatrix*drawSettings.atomScale;
     if (drawSettings.drawMode == 1) {
-        output.color = vec4(normal, 1);
+        output.color = vec4(n, 1);
     } else { //if (drawSettings.drawMode == 0/2)
-        output.color = blinnPhong(pos, cameraPos-pos, color, (mMatrix*vec4(normal, 0)).xyz);
+        output.color = blinnPhong(pos, cameraPos-pos, color, n);
     }
     //output.color = vec4(middlePos.z/1000, middlePos.z/1000, middlePos.z/1000, 1);
     //output.color = vec4((distance(middlePos, worldPos)+distance(middlePos, cameraPos))/position.w, (distance(middlePos, worldPos)+distance(middlePos, cameraPos))/100, (distance(middlePos, worldPos)+distance(middlePos, cameraPos))/10, 1);
     //output.color = vec4(position.w/2, position.w, position.w*10, 1);
-    //output.depth = position.z;
-    output.depth = position.z+(distance(middlePos, worldPos)*0.02)*position.w;
+    output.depth = position.z;
+    if (drawSettings.billboardMode != 3) {
+        output.depth = position.z+(distance(middlePos, worldPos)*0.02)*position.w;
+    }
     return output;
 }
