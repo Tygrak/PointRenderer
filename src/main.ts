@@ -144,8 +144,7 @@ async function Initialize() {
     let previousFrameDeltaTimesMs: number[] = new Array<number>(60).fill(15);
     let frameId = 0;
 
-    let startTime = 0;
-    startTime = performance.now();
+    let startTime = performance.now();
 
     function draw() {
         if (!document.hasFocus()) {
@@ -188,6 +187,7 @@ async function Initialize() {
             if (rotateLightCheckbox.checked) {
                 impostorRenderer.lightDir = [Math.sin((performance.now()-startTime)/1000.0), 1, Math.cos((performance.now()-startTime)/1000.0)];
             }
+            impostorRenderer.time = (performance.now()-startTime)/1000.0;
             impostorRenderer.billBoardMode = parseInt(billboardSelect.value);
             impostorRenderer.drawMode = parseInt(debugSelect.value);
             impostorRenderer.Draw(device, renderPass, mvpMatrix, vImpostorMatrix, modelMatrix, cameraPosition, drawAmount, sizeScale);

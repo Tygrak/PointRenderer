@@ -8,6 +8,7 @@ export class ImpostorRenderer {
     pointsCount : number = 1;
     drawMode = 0;
     billBoardMode = 0;
+    time = 0;
     lightDir = [0.2, 1, 0];
     modelMatrix : mat4 = mat4.identity(mat4.create());
     quadPositions : GPUBuffer;
@@ -28,7 +29,7 @@ export class ImpostorRenderer {
         let quad = CreateQuadGeometry(new Point(0, 0, 0, 0, 1, 0));
         this.quadPositions = CreateGPUBuffer(device, quad.positions);
         this.quadColors = CreateGPUBuffer(device, quad.color);
-        this.quadNormals = CreateGPUBuffer(device, quad.info);
+        this.quadNormals = CreateGPUBuffer(device, quad.normals);
         this.quadSizes = CreateGPUBuffer(device, quad.sizes);
 
         this.pipeline = device.createRenderPipeline({
@@ -39,32 +40,36 @@ export class ImpostorRenderer {
                 }),
                 entryPoint: "vs_main",
                 buffers:[
-                    {
+                    { //position
                         arrayStride: 4*3,
+                        stepMode: 'instance',
                         attributes: [{
                             shaderLocation: 0,
                             format: "float32x3",
                             offset: 0
                         }]
                     },
-                    {
+                    { //color
                         arrayStride: 4*3,
+                        stepMode: 'instance',
                         attributes: [{
                             shaderLocation: 1,
                             format: "float32x3",
                             offset: 0
                         }]
                     },
-                    {
+                    { //normal
                         arrayStride: 4*3,
+                        stepMode: 'instance',
                         attributes: [{
                             shaderLocation: 2,
                             format: "float32x3",
                             offset: 0
                         }]
                     },
-                    {
+                    { //size
                         arrayStride: 4*1,
+                        stepMode: 'instance',
                         attributes: [{
                             shaderLocation: 3,
                             format: "float32",
@@ -145,7 +150,7 @@ export class ImpostorRenderer {
         });
 
         this.drawSettingsBuffer = device.createBuffer({
-            size: 32,
+            size: 48,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         this.drawSettingsBindGroup = device.createBindGroup({
@@ -163,25 +168,23 @@ export class ImpostorRenderer {
 
     public LoadPoints(device: GPUDevice, points: Point[]) {
         this.pointsCount = points.length;
-        let positions = new Float32Array(this.pointsCount*6*3);
-        let colors = new Float32Array(this.pointsCount*6*3);
-        let normals = new Float32Array(this.pointsCount*6*3);
-        let sizes = new Float32Array(this.pointsCount*6*1);
+        let positions = new Float32Array(this.pointsCount*3);
+        let colors = new Float32Array(this.pointsCount*3);
+        let normals = new Float32Array(this.pointsCount*3);
+        let sizes = new Float32Array(this.pointsCount*1);
         for (let i = 0; i < points.length; i++) {
             const point = points[i];
             let quad = CreateQuadGeometry(point);
-            for (let vertex = 0; vertex < 6; vertex++) {
-                positions[vertex*3+i*18+0] = point.x;
-                positions[vertex*3+i*18+1] = point.y;
-                positions[vertex*3+i*18+2] = point.z;
-                colors[vertex*3+i*18+0] = quad.color[vertex*3+0];
-                colors[vertex*3+i*18+1] = quad.color[vertex*3+1];
-                colors[vertex*3+i*18+2] = quad.color[vertex*3+2];
-                normals[vertex*3+i*18+0] = point.normal[0];
-                normals[vertex*3+i*18+1] = point.normal[1];
-                normals[vertex*3+i*18+2] = point.normal[2];
-                sizes[vertex+i*6] = point.size;
-            }
+            positions[i*3+0] = point.x;
+            positions[i*3+1] = point.y;
+            positions[i*3+2] = point.z;
+            colors[i*3+0] = quad.color[0];
+            colors[i*3+1] = quad.color[1];
+            colors[i*3+2] = quad.color[2];
+            normals[i*3+0] = point.normal[0];
+            normals[i*3+1] = point.normal[1];
+            normals[i*3+2] = point.normal[2];
+            sizes[i] = point.size;
         }
         this.quadPositions = CreateGPUBuffer(device, positions);
         this.quadColors = CreateGPUBuffer(device, colors);
@@ -195,7 +198,7 @@ export class ImpostorRenderer {
         device.queue.writeBuffer(this.mUniformBuffer, 0, modelMatrix as ArrayBuffer);
         device.queue.writeBuffer(this.cameraPosBuffer, 0, vec4.fromValues(cameraPos[0], cameraPos[1], cameraPos[2], 1.0) as ArrayBuffer);
 
-        let drawSettingsBuffer = new Float32Array(8);
+        let drawSettingsBuffer = new Float32Array(12);
         drawSettingsBuffer[0] = Math.round(percentageShown*this.pointsCount);
         drawSettingsBuffer[1] = this.drawMode;
         drawSettingsBuffer[2] = this.billBoardMode;
@@ -204,6 +207,10 @@ export class ImpostorRenderer {
         drawSettingsBuffer[5] = this.lightDir[1];
         drawSettingsBuffer[6] = this.lightDir[2];
         drawSettingsBuffer[7] = 0;
+        drawSettingsBuffer[8] = this.time;
+        drawSettingsBuffer[9] = 0;
+        drawSettingsBuffer[10] = 0;
+        drawSettingsBuffer[11] = 0;
         device.queue.writeBuffer(this.drawSettingsBuffer, 0, drawSettingsBuffer as ArrayBuffer);
 
         renderPass.setPipeline(this.pipeline);
@@ -213,6 +220,6 @@ export class ImpostorRenderer {
         renderPass.setVertexBuffer(1, this.quadColors);
         renderPass.setVertexBuffer(2, this.quadNormals);
         renderPass.setVertexBuffer(3, this.quadSizes);
-        renderPass.draw(this.pointsCount*6);
+        renderPass.draw(6, this.pointsCount);
     }
 }

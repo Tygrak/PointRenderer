@@ -9,6 +9,10 @@ struct DrawSettings {
     billboardMode : f32,
     atomScale : f32,
     lightDir : vec4<f32>,
+    time : f32,
+    pad2 : f32,
+    pad3 : f32,
+    pad4 : f32,
 }
 @binding(0) @group(1) var<uniform> drawSettings : DrawSettings;
 
@@ -20,6 +24,10 @@ struct VertexOutput {
     @location(3) normal : vec3<f32>,
     @location(4) middlePos : vec4<f32>
 };
+
+fn rand(co: vec2<f32>) -> f32 {
+  return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
+}
 
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) normal: vec3<f32>, @location(3) size: f32) -> VertexOutput {
@@ -54,6 +62,11 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     }
     output.worldPos = output.position;
     output.position = mvpMatrix * output.position;
+    /*
+    let group = f32(index/6)*0.001;
+    let dir = normalize(vec3(0, rand(vec2(group*71, group*73)), 0));
+    output.position = output.position + vec4(10*dir*sin(drawSettings.time), 0);
+    */
     output.middlePos = output.middlePos;
     output.color = color;
     output.normal = normal;
@@ -89,7 +102,8 @@ struct FragmentOutput {
 }
 
 @fragment
-fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32>, @location(1) uv: vec2<f32>, @location(2) worldPos: vec4<f32>, @location(3) normal: vec3<f32>, @location(4) middlePos: vec4<f32>) -> FragmentOutput {
+fn fs_main(@builtin(position) position : vec4<f32>, @location(0) color: vec4<f32>, @location(1) uv: vec2<f32>, 
+           @location(2) worldPos: vec4<f32>, @location(3) normal: vec3<f32>, @location(4) middlePos: vec4<f32>) -> FragmentOutput {
     var output: FragmentOutput;
     let amount = drawSettings.amount;
     if (amount < 0) {

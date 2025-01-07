@@ -259,8 +259,8 @@ export function CreateQuadGeometry(point: Point) {
         ...color,
         ...color,
     ]);
-    let i = vec3.fromValues(1, 1, 0.0);
-    let atomInfo = new Float32Array([
+    let i = vec3.fromValues(0, 1, 0);
+    let normals = new Float32Array([
         ...i, 
         ...i,
         ...i,
@@ -270,7 +270,7 @@ export function CreateQuadGeometry(point: Point) {
         ...i,
     ]);
     let sizes = new Float32Array([1, 1]);
-    return {positions: resultPositions, color: resultColors, info: atomInfo, sizes: sizes};
+    return {positions: resultPositions, color: resultColors, normals: normals, sizes: sizes};
 }
 
 // https://www.songho.ca/opengl/gl_sphere.html
