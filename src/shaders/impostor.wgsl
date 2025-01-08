@@ -30,7 +30,8 @@ fn rand(co: vec2<f32>) -> f32 {
 }
 
 @vertex
-fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) normal: vec3<f32>, @location(3) size: f32) -> VertexOutput {
+fn vs_main(@builtin(vertex_index) index: u32, @builtin(instance_index) instance: u32, 
+           @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) normal: vec3<f32>, @location(3) size: f32) -> VertexOutput {
     let cameraRight = vec4(1, 0, 0, 0)*vMatrix;
     let cameraUp = vec4(0, 1, 0, 0)*vMatrix;
     var output: VertexOutput;
@@ -62,14 +63,22 @@ fn vs_main(@builtin(vertex_index) index: u32, @location(0) pos: vec4<f32>, @loca
     }
     output.worldPos = output.position;
     output.position = mvpMatrix * output.position;
-    /*
-    let group = f32(index/6)*0.001;
-    let dir = normalize(vec3(0, rand(vec2(group*71, group*73)), 0));
-    output.position = output.position + vec4(10*dir*sin(drawSettings.time), 0);
-    */
     output.middlePos = output.middlePos;
     output.color = color;
     output.normal = normal;
+    
+    /*
+    let group = f32(instance)*1.1;
+    let dir1 = normalize(vec3(rand(vec2(group*1.0771, group*1.73)), rand(vec2(group*2.0771, group*3.73)), rand(vec2(group*3.0771, group*4.73))))*vec3(1, 7, 1);
+    let dir2 = normalize(vec3(rand(vec2(group*6.0771, group*6.73)), rand(vec2(group*7.0771, group*0.73)), rand(vec2(group*5.0771, group*7.73))))*vec3(1, 5.5, 1);
+    let magnitude = max(mix(sqrt((10.5-drawSettings.time%12)/10.5), pow((11.5-drawSettings.time%12)/11.5, 3), 0.5), 0)*min(9*(drawSettings.time%12), 1);
+    let circularSpeed = rand(vec2(group*0.91771, group*0.993273))*7+0.1;
+    let circularDist = rand(vec2(group*1.91771, group*2.193273))*14+4;
+    let circular = vec3(sin(drawSettings.time*circularSpeed)*circularDist, 0, cos(drawSettings.time*circularSpeed)*circularDist);
+    output.position = output.position + vec4(15*cos(drawSettings.time*0.1317)*dir1*sin(drawSettings.time*0.217)+dir2*11*cos(drawSettings.time*0.1317)*cos(drawSettings.time*0.091417)+circular, 0)*magnitude;
+    */
+    //output.color = vec4(rand(vec2(group*1.0771, group*1.73)), rand(vec2(group*2.0771, group*3.73)), rand(vec2(group*3.0771, group*4.73)), 1.0);
+    
     return output;
 }
 

@@ -10,6 +10,7 @@ export class DataLoader {
     device: GPUDevice;
     format: GPUTextureFormat;
     MaxTrianglePoints = 5;
+    DefaultColor = vec3.fromValues(1.0, 1.0, 1.0);
 
     constructor (device: GPUDevice, format: GPUTextureFormat) {
         this.device = device;
@@ -229,9 +230,9 @@ export class DataLoader {
         for (let i = 0; i < vertices.length; i++) {
             let point = new Point(vertices[i][0], vertices[i][1], vertices[i][2], normals[i][0], normals[i][1], normals[i][2]);
             if (colors.length > i) {
-                point.r = colors[i][0];
-                point.g = colors[i][1];
-                point.b = colors[i][2];
+                point.r = colors[i][0]; point.g = colors[i][1]; point.b = colors[i][2];
+            } else {
+                point.r = this.DefaultColor[0]; point.g = this.DefaultColor[1]; point.b = this.DefaultColor[2];
             }
             points.push(point);
         }
@@ -290,7 +291,7 @@ export class DataLoader {
         if (normalizeSize) {
             this.NormalizeVerticesSize(vertices);
         }
-        const defaultColor = vec3.fromValues(0.9, 0.9, 0.9);
+        const defaultColor = vec3.fromValues(this.DefaultColor[0], this.DefaultColor[1], this.DefaultColor[2]);
         for (let i = 0; i < faces.length; i++) {
             const v0 = vertices[faces[i][0]];
             const v1 = vertices[faces[i][1]];

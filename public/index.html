@@ -63,6 +63,15 @@
                   <option value="2">Quads</option>
                   <option value="3">No Depth Manip</option>
                </select>
+               <button class="collapsible" onclick="ToggleColorOptions(this)">Color Options</button>
+               <div class="content" id="colorOptions">
+                  <label>
+                     <input id="defaultColorRInput" type="number" min="0" max="1" step="0.01" name="options" value="1.0" class="smallNumber">
+                     <input id="defaultColorGInput" type="number" min="0" max="1" step="0.01" name="options" value="1.0" class="smallNumber">
+                     <input id="defaultColorBInput" type="number" min="0" max="1" step="0.01" name="options" value="1.0" class="smallNumber">
+                     default vertex color
+                  </label>
+               </div>
             </div>
          </div>  
       </div>

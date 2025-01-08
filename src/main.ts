@@ -23,6 +23,9 @@ const normalizeSizeCheckbox = document.getElementById("normalizeSizeCheckbox") a
 const rotateLightCheckbox = document.getElementById("rotateLightCheckbox") as HTMLInputElement;
 const billboardSelect = document.getElementById("billboardSelect") as HTMLSelectElement;
 const debugSelect = document.getElementById("debugSelect") as HTMLSelectElement;
+const defaultColorRInput = document.getElementById("defaultColorRInput") as HTMLInputElement;
+const defaultColorGInput = document.getElementById("defaultColorGInput") as HTMLInputElement;
+const defaultColorBInput = document.getElementById("defaultColorBInput") as HTMLInputElement;
 
 const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
 const pointsCounterElement = document.getElementById("pointsCounter") as HTMLParagraphElement;
@@ -74,6 +77,7 @@ async function Initialize() {
         let t0 = performance.now();
         console.log(dataFileInput.files![0].name);
         dataLoader.MaxTrianglePoints = parseInt(maxPointsSplitSlider.value);
+        dataLoader.DefaultColor = vec3.fromValues(parseFloat(defaultColorRInput.value), parseFloat(defaultColorGInput.value), parseFloat(defaultColorBInput.value));
 
         if (dataFileInput.files![0].name.includes(".obj")) {
             LoadData(dataFileInput.files[0], (text: string) => {
