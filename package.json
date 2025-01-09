@@ -1,21 +1,50 @@
 {
   "name": "webgpu-point-renderer",
+  "productName": "webgpu-point-renderer",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Tygrak's Point Renderer",
+  "main": ".webpack/main",
   "scripts": {
-    "tsc": "tsc",
-    "tscw": "tsc --watch",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
     "dev": "webpack --mode development",
-    "prod": "webpack --mode production",
-    "watch": "webpack --watch --mode production",
-    "deploy": "push-dir --dir=dist --branch=gh-pages --allow-unclean",
-    "devserver": "http-server"
+    "lint": "eslint --ext .ts,.tsx ."
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.6.0",
+    "@electron-forge/maker-deb": "^7.6.0",
+    "@electron-forge/maker-rpm": "^7.6.0",
+    "@electron-forge/maker-squirrel": "^7.6.0",
+    "@electron-forge/maker-zip": "^7.6.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.6.0",
+    "@electron-forge/plugin-fuses": "^7.6.0",
+    "@electron-forge/plugin-webpack": "^7.6.0",
+    "@electron/fuses": "^1.8.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "css-loader": "^6.11.0",
+    "electron": "33.3.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.31.0",
+    "fork-ts-checker-webpack-plugin": "^7.3.0",
+    "node-loader": "^2.1.0",
+    "style-loader": "^3.3.4",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "push-dir": "^0.4.1",
+    "typescript": "~4.5.4"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": {
+    "name": "Tygrak",
+    "email": "23155456+Tygrak@users.noreply.github.com"
+  },
+  "license": "MIT",
   "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
     "@types/jquery": "^3.5.5",
     "@types/node": "14.14.20",
     "@webgpu/types": "^0.1.21",
@@ -31,10 +60,5 @@
     "ts-shader-loader": "^1.0.6",
     "typescript": "^4.2.3",
     "webpack-cli": "^4.6.0"
-  },
-  "devDependencies": {
-    "http-server": "^14.1.x",
-    "push-dir": "^0.4.1",
-    "webpack": "^5.97.1"
   }
 }

@@ -108,7 +108,7 @@ export function lerp(x: number, y: number, t: number){
 }
 
 export function CreateTimestampBuffer(device: GPUDevice, capacity: number = 8) {
-    capacity = Math.floor(8); //Max number of timestamps we can store
+    capacity = Math.floor(capacity); //Max number of timestamps we can store
     let querySet = device.createQuerySet({
         type: "timestamp",
         count: capacity,
@@ -120,7 +120,11 @@ export function CreateTimestampBuffer(device: GPUDevice, capacity: number = 8) {
         | GPUBufferUsage.COPY_SRC
         | GPUBufferUsage.COPY_DST,
     });
-    return {queryBuffer, querySet, capacity}; 
+    let resultBuffer = device.createBuffer({
+        size: queryBuffer.size,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    return {queryBuffer, resultBuffer, querySet, capacity}; 
 }
 
 export async function CheckWebGPU() {

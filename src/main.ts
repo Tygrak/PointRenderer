@@ -1,12 +1,13 @@
 import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData, LoadDataArrayBuffer} from './helper';
 import shader from './shaders/basic.wgsl';
-import "./site.css";
 import { vec3, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
 import { ImpostorRenderer } from './impostorRenderer';
 import { AxisMesh } from './axisMesh';
 import { DataLoader } from './loadData';
 import { Point } from './point';
+
+import './site.css';
 
 const createCamera = require('3d-view-controls');
 
@@ -42,11 +43,12 @@ async function Initialize() {
 
     let timestampBuffers: {
         queryBuffer: GPUBuffer;
+        resultBuffer: GPUBuffer;
         querySet: GPUQuerySet;
         capacity: number;
     };
     if (gpu.timestampsEnabled) {
-        timestampBuffers = CreateTimestampBuffer(device, 8);
+        timestampBuffers = CreateTimestampBuffer(device, 2);
     }
 
     axisMesh = new AxisMesh(device, gpu.format);
@@ -123,7 +125,14 @@ async function Initialize() {
             depthClearValue: 1.0,
             depthLoadOp:'clear',
             depthStoreOp: 'store',
-        }
+        },
+        ...(gpu.timestampsEnabled && {
+            timestampWrites: {
+                querySet: timestampBuffers.querySet,
+                beginningOfPassWriteIndex: 0,
+                endOfPassWriteIndex: 1,
+            },
+        }),
     };
     let textureQuadPassDescriptor: GPURenderPassDescriptor = {
         colorAttachments: [{
@@ -149,6 +158,7 @@ async function Initialize() {
     let frameId = 0;
 
     let startTime = performance.now();
+    let gpuTime = 0;
 
     function draw() {
         if (!document.hasFocus()) {
@@ -169,9 +179,6 @@ async function Initialize() {
         textureView = gpu.context.getCurrentTexture().createView();
         renderPassDescription.colorAttachments[0].view = textureView;
         const commandEncoder = device.createCommandEncoder();
-        if (gpu.timestampsEnabled) {
-            commandEncoder.writeTimestamp(timestampBuffers.querySet, 0);
-        }
 
         const renderPass = commandEncoder.beginRenderPass(renderPassDescription as GPURenderPassDescriptor);
 
@@ -204,15 +211,17 @@ async function Initialize() {
         renderPass.end();
 
         if (gpu.timestampsEnabled) {
-            commandEncoder.writeTimestamp(timestampBuffers.querySet, 1);
-            commandEncoder.resolveQuerySet(timestampBuffers.querySet, 0, 2, timestampBuffers.queryBuffer, 0);
+            commandEncoder.resolveQuerySet(timestampBuffers.querySet, 0, timestampBuffers.querySet.count, timestampBuffers.queryBuffer, 0);
+            if (timestampBuffers.resultBuffer.mapState === 'unmapped') {
+                commandEncoder.copyBufferToBuffer(timestampBuffers.queryBuffer, 0, timestampBuffers.resultBuffer, 0, timestampBuffers.resultBuffer.size);
+            }
         }
         
         device.queue.submit([commandEncoder.finish()]);
         
         pointsCounterElement.innerText = pointsCount.toFixed(0) + " points";
         //read query buffer with timestamps
-        if (gpu.timestampsEnabled) {
+        if (gpu.timestampsEnabled && timestampBuffers.resultBuffer.mapState === 'unmapped') {
             const size = timestampBuffers.queryBuffer.size;
             const gpuReadBuffer = device.createBuffer({size, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ});  const copyEncoder = device.createCommandEncoder();
             copyEncoder.copyBufferToBuffer(timestampBuffers.queryBuffer, 0, gpuReadBuffer, 0, size);  const copyCommands = copyEncoder.finish();
@@ -254,7 +263,14 @@ async function Initialize() {
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store',
-            }
+            },
+            ...(gpu.timestampsEnabled && {
+                timestampWrites: {
+                    querySet: timestampBuffers.querySet,
+                    beginningOfPassWriteIndex: 0,
+                    endOfPassWriteIndex: 1,
+                },
+            }),
         };
         textureQuadPassDescriptor = {
             colorAttachments: [{
@@ -338,7 +354,7 @@ async function Initialize() {
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/ABeautifulGame/glTF/ABeautifulGame.gltf';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/Sponza/glTF/Sponza.gltf';
-    impostorRenderers = await dataLoader.LoadDataGltf(uri);
+    //impostorRenderers = await dataLoader.LoadDataGltf(uri);
 }
 
 Initialize();

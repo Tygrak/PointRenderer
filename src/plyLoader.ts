@@ -1,4 +1,5 @@
 /**
+ * modified from https://github.com/brunocangs/three-ply-loader-ts/tree/master
  * based on three-ply-loader-ts by Wei Meng / http://about.me/menway
  *
  * Description: A THREE loader for PLY ASCII files (known as the Polygon

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<head>
+   <meta charset="utf-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <title>Tygrak's Point Renderer</title>
+   <meta name="description" content="">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+   <div class="grid">
+      <div class="item1">
+         <div>
+            <button id="dataLoadButton">Load Data</button>
+            <input type="file" id="dataFileInput" name="dataFileInput" accept=".data,.txt,.ply,.pcd,.obj">
+         </div>
+         <div>
+            <p id="fpsCounter">10fps</p>
+            <p id="pointsCounter">10 points</p>
+         </div>
+         <br>  
+         <div>
+            <button class="collapsible" onclick="ToggleAdditionalOptions(this)">Additional Options</button>
+            <div class="content" id="additionalOptions">
+               <label><input id="canvasSizeCheckbox" type="checkbox" name="options" value="fixed">Use Fixed Canvas Size</label>
+               <br>
+               <label><input id="drawAxesCheckbox" type="checkbox" name="options" value="fixed" checked>Draw Axes</label>
+               <br>
+               <label><input id="normalizeSizeCheckbox" type="checkbox" name="options" value="fixed" checked>Normalize Model Size</label>
+               <br>
+               <label><input id="rotateLightCheckbox" type="checkbox" name="options" value="fixed">Rotate Light</label>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.1" max="2.5" step="0.1" value="1" class="slider" id="impostorSizeScaleSlider">Point Size Scale</label>
+               </div>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.0" max="6.284" step="0.001" value="0" class="slider" id="modelRotateXSlider">Model Rotate X</label>
+               </div>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.0" max="6.284" step="0.001" value="0" class="slider" id="modelRotateYSlider">Model Rotate Y</label>
+               </div>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="0.0" max="6.284" step="0.001" value="0" class="slider" id="modelRotateZSlider">Model Rotate Z</label>
+               </div>
+               <br>
+               <br>
+               <div class="slidecontainer">
+                  <label><input type="range" min="1" max="20" step="1" value="3" class="slider" id="maxPointsSplitSlider">Max Points Split</label>
+               </div>
+               <br>
+               <select id="debugSelect" style="width: 8rem;">
+                  <option selected value="0">Default</option>
+                  <option value="1">Normals</option>
+                  <option value="2">BlinnPhong</option>
+               </select>
+               <br>
+               <select id="billboardSelect" style="width: 8rem;">
+                  <option selected value="0">Not Billboard</option>
+                  <option value="1">Yes Billboard</option>
+                  <option value="2">Quads</option>
+                  <option value="3">No Depth Manip</option>
+               </select>
+               <button class="collapsible" onclick="ToggleColorOptions(this)">Color Options</button>
+               <div class="content" id="colorOptions">
+                  <label>
+                     <input id="defaultColorRInput" type="number" min="0" max="1" step="0.01" name="options" value="1.0" class="smallNumber">
+                     <input id="defaultColorGInput" type="number" min="0" max="1" step="0.01" name="options" value="1.0" class="smallNumber">
+                     <input id="defaultColorBInput" type="number" min="0" max="1" step="0.01" name="options" value="1.0" class="smallNumber">
+                     default vertex color
+                  </label>
+               </div>
+            </div>
+         </div>  
+      </div>
+      <div class="item2" style="user-select: none;">
+         <canvas id="canvas-webgpu" style="max-width: 800;"></canvas>
+      </div>
+   </div>
+
+   <p class="overlayMessage" id="overlayNotSupportedWebGPU">Test</p>
+   <p class="overlayMessage" id="overlayMessage">Test</p>
+
+   <script>
+      function ToggleAdditionalOptions(button){
+         button.classList.toggle('active');
+         let content = document.getElementById("additionalOptions");
+         content.classList.toggle("opened");
+      };
+      
+      function ToggleColorOptions(button){
+         button.classList.toggle('active');
+         let content = document.getElementById("colorOptions");
+         content.classList.toggle("opened");
+      };
+      
+      function ToggleBenchmarkOptions(button){
+         button.classList.toggle('active');
+         let content = document.getElementById("benchmarkOptions");
+         content.classList.toggle("opened");
+      };
+   </script>
+</body>
+</html>
