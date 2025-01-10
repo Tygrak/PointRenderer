@@ -5,6 +5,9 @@ import { app, BrowserWindow } from 'electron';
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
+const path = require('path');
+let fs = require('fs');
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
     app.quit();
@@ -17,13 +20,24 @@ const createWindow = (): void => {
         width: 1200,
         webPreferences: {
             preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+            contextIsolation: true,
+            nodeIntegration: true
         },
     });
 
     // and load the index.html of the app.
     mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-    // Open the DevTools.
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+            responseHeaders: {
+              ...details.responseHeaders,
+              //todo fix:
+              'Content-Security-Policy': '*'//"script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://raw.githubusercontent.com data:application;"
+            }
+        })
+    });
+
     mainWindow.webContents.openDevTools();
 };
 
