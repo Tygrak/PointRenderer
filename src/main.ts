@@ -8,6 +8,7 @@ import { DataLoader } from './loadData';
 import { Point } from './point';
 
 import './site.css';
+import { FreeCamera } from './freeCamera';
 
 const createCamera = require('3d-view-controls');
 
@@ -35,7 +36,7 @@ const overlayMessageElement = document.getElementById("overlayMessage") as HTMLP
 let axisMesh: AxisMesh;
 let impostorRenderers: ImpostorRenderer[] = [];
 
-let freeCam = {position: vec3.fromValues(0, 0, -10), forward: vec3.fromValues(0, 0, 1), up: vec3.fromValues(0, 1, 0), used: false};
+let freeCam = new FreeCamera();
 
 let device: GPUDevice;
 
@@ -167,7 +168,10 @@ async function Initialize() {
             return;
         }
 
-        if (camera.tick()) {
+        const pMatrix = vp.projectionMatrix;
+        if (!freeCam.used && camera.tick()) {
+            vMatrix = camera.matrix;
+            mat4.multiply(vpMatrix, pMatrix, vMatrix);
         }
         frameId++;
 
@@ -184,8 +188,8 @@ async function Initialize() {
         let vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
         if (freeCam.used) {
             vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, freeCam.position, vec3.add(vec3.create(), freeCam.position, freeCam.forward), freeCam.up);
+            vpMatrix = vpImpostor.viewProjectionMatrix;
         }
-        vpMatrix = vpImpostor.viewProjectionMatrix;
         let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
         let drawAmount = 1;
         let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
@@ -289,30 +293,22 @@ async function Initialize() {
         Reinitialize();
     });
     
+    let pitch = Math.PI/2;
+    let yaw = 0;
+    let lastMousePosX = 0;
+    let lastMousePosY = 0;
+    let mouseDown = false;
+
     if (document != null) {
-        document.addEventListener('keypress', function(keyEvent: KeyboardEvent){
-            if (keyEvent.code == "KeyW") {
-                freeCam.position = vec3.add(vec3.create(), freeCam.position, freeCam.forward);
-            } else if (keyEvent.code == "KeyS") {
-                freeCam.position = vec3.subtract(vec3.create(), freeCam.position, freeCam.forward);
-            } else if (keyEvent.code == "KeyA") {
-                let right = vec3.cross(vec3.create(), freeCam.forward, freeCam.up);
-                freeCam.position = vec3.subtract(vec3.create(), freeCam.position, right);
-            } else if (keyEvent.code == "KeyD") {
-                let right = vec3.cross(vec3.create(), freeCam.forward, freeCam.up);
-                freeCam.position = vec3.add(vec3.create(), freeCam.position, right);
-            } else if (!keyEvent.shiftKey && keyEvent.code == "KeyE") {
-                freeCam.forward = vec3.rotateY(vec3.create(), freeCam.forward, vec3.create(), -0.05);
-            } else if (!keyEvent.shiftKey && keyEvent.code == "KeyQ") {
-                freeCam.forward = vec3.rotateY(vec3.create(), freeCam.forward, vec3.create(), 0.05);
-            } else if (keyEvent.shiftKey && keyEvent.code == "KeyE") {
-                freeCam.position = vec3.add(vec3.create(), freeCam.position, freeCam.up);
-            } else if (keyEvent.shiftKey && keyEvent.code == "KeyQ") {
-                freeCam.position = vec3.subtract(vec3.create(), freeCam.position, freeCam.up);
-            } else if (keyEvent.code == "KeyC") {
+        freeCam.Initialize();
+
+        document.addEventListener('keypress', function(keyEvent: KeyboardEvent) {
+            if (keyEvent.code == "KeyC") {
                 if (!freeCam.used) {
                     freeCam.position = camera.eye;
-                    freeCam.forward = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), camera.center, camera.eye));
+                    freeCam.CalculateRotation();
+                    //freeCam.forward = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), camera.center, camera.eye));
+                    //freeCam.forward[1] = 0;
                 }
                 freeCam.used = !freeCam.used;
             } else if (keyEvent.code == "Numpad1") {
