@@ -1,4 +1,6 @@
-import { vec2, vec3, mat4 } from 'gl-matrix';
+import { vec3, vec4, mat4 } from 'gl-matrix';
+import { ImpostorRenderer } from './impostorRenderer';
+import { Point } from './point';
 
 export function CreateModelMatrix(out: mat4, translation:vec3 = [0,0,0], rotation:vec3 = [0,0,0], scaling:vec3 = [1,1,1]) {
     const rotateXMat = mat4.create();
@@ -21,11 +23,10 @@ export function CreateModelMatrix(out: mat4, translation:vec3 = [0,0,0], rotatio
     mat4.multiply(out, translateMat, out);
 };
 
-export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2, 2, 4], center:vec3 = [0, 0, 0], upDirection:vec3 = [0, 1, 0]) {
+export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2, 2, 4], center:vec3 = [0, 0, 0], upDirection:vec3 = [0, 1, 0], far = 5000) {
     const viewMatrix = mat4.create();
     const projectionMatrix = mat4.create();       
     const viewProjectionMatrix = mat4.create();
-    const far = 10000.0;
     mat4.perspective(projectionMatrix, 2*Math.PI/5, aspectRatio, 0.1, far);
 
     mat4.lookAt(viewMatrix, cameraPosition, center, upDirection);
@@ -46,6 +47,89 @@ export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2
         far
     }
 };
+
+export function GetViewFrustum(vMatrix: mat4, pMatrix: mat4) {
+    let corners: vec3[] = [];
+    let inv_v = mat4.invert(mat4.create(), vMatrix);
+    let inv_p = mat4.invert(mat4.create(), pMatrix);
+    for (let x = -1; x <= 1; x+=2) {
+        for (let y = -1; y <= 1; y+=2) {
+            for (let z = -1; z <= 1; z+=2) {
+                let ndc_corner = vec4.fromValues(x, y, z, 1);
+                let view_corner_h = vec4.transformMat4(vec4.create(), ndc_corner, inv_p);
+                let view_corner = vec4.scale(vec4.create(), view_corner_h, 1/view_corner_h[3]);
+                let world_corner = vec4.transformMat4(vec4.create(), view_corner, inv_v);
+                corners.push(vec3.fromValues(world_corner[0], world_corner[1], world_corner[2]));
+            }
+        }
+    }
+    let triangles: number[][] = [];
+    triangles.push([0, 1, 2]);
+    triangles.push([3, 1, 2]);
+    triangles.push([2, 3, 6]);
+    triangles.push([7, 3, 6]);
+    triangles.push([6, 7, 4]);
+    triangles.push([5, 7, 4]);
+    triangles.push([0, 4, 1]);
+    triangles.push([5, 4, 1]);
+    triangles.push([0, 2, 4]);
+    triangles.push([6, 2, 4]);
+    triangles.push([1, 5, 3]);
+    triangles.push([7, 5, 3]);
+    let normals: vec3[] = [];
+    for (let i = 0; i < triangles.length; i+=2) {
+        normals.push(vec3.normalize(vec3.create(), vec3.cross(vec3.create(), vec3.subtract(vec3.create(), corners[triangles[i][1]], corners[triangles[i][0]]), vec3.subtract(vec3.create(), corners[triangles[i][2]], corners[triangles[i][0]]))));
+    }
+    //normals.push(vec3.normalize(vec3.create(), vec3.cross(vec3.create(), vec3.subtract(vec3.create(), corners[1], corners[0]), vec3.subtract(vec3.create(), corners[2], corners[0]))));
+    let normalsTest: vec3[] = [];
+    for (let i = 0; i < normals.length; i++) {
+        let center = vec3.scale(vec3.create(),
+            vec3.add(vec3.create(), 
+            vec3.add(vec3.create(), corners[triangles[i*2][0]], corners[triangles[i*2][1]]), 
+            vec3.add(vec3.create(), corners[triangles[i*2][2]], corners[triangles[i*2+1][0]])), 
+            1/4);
+        normalsTest.push(center);
+        normalsTest.push(vec3.add(vec3.create(), vec3.scale(vec3.create(), normals[i], 1), center));
+        normalsTest.push(vec3.add(vec3.create(), vec3.scale(vec3.create(), normals[i], 2), center));
+        normalsTest.push(vec3.add(vec3.create(), vec3.scale(vec3.create(), normals[i], 3), center));
+        normalsTest.push(vec3.add(vec3.create(), vec3.scale(vec3.create(), normals[i], 4), center));
+    }
+    return {corners, normals, triangles, normalsTest};
+}
+
+export function CreateImpostorRendererFromVectors(device: GPUDevice, format: GPUTextureFormat, vectors: vec3[], color: vec3 = vec3.fromValues(1, 1, 1), size: number = 1) {
+    let renderer = new ImpostorRenderer(device, format);
+    let points: Point[] = [];
+    for (let i = 0; i < vectors.length; i++) {
+        let point = new Point(vectors[i][0], vectors[i][1], vectors[i][2], 0, 1, 0);
+        point.r = color[0]; point.g = color[1]; point.b = color[2];
+        point.size = size;
+        points.push(point);
+    }
+    renderer.LoadPoints(device, points);
+    return renderer;
+}
+
+export function CreateImpostorRendererFromPoints(device: GPUDevice, format: GPUTextureFormat, points: Point[], color: vec3 = vec3.fromValues(-1, -1, -1), size: number = -1) {
+    let renderer = new ImpostorRenderer(device, format);
+    let pointsResult: Point[] = [];
+    for (let i = 0; i < points.length; i++) {
+        let point = new Point(points[i].x, points[i].y, points[i].z, points[i].normal[0], points[i].normal[1], points[i].normal[2]);
+        if (color[0] != -1) {
+            point.r = color[0]; point.g = color[1]; point.b = color[2];
+        } else {
+            point.r = points[i].r; point.g = points[i].g; point.b = points[i].b;
+        }
+        if (size != -1) {
+            point.size = size;
+        } else {
+            point.size = points[i].size;
+        }
+        pointsResult.push(point);
+    }
+    renderer.LoadPoints(device, pointsResult);
+    return renderer;
+}
 
 
 export function CreateGPUBufferUint(device:GPUDevice, data:Uint32Array, 

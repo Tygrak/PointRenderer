@@ -10,12 +10,14 @@ export class ImpostorRenderer {
     billBoardMode = 0;
     time = 0;
     lightDir = [0.2, 1, 0];
+    boundsMin = [1000000000, 1000000000, 1000000000];
+    boundsMax = [-1000000000, -1000000000, -1000000000];
     modelMatrix : mat4 = mat4.identity(mat4.create());
     quadPositions : GPUBuffer;
     quadColors : GPUBuffer;
     quadNormals : GPUBuffer;
     quadSizes : GPUBuffer;
-    pipeline : GPURenderPipeline;
+    static pipeline : GPURenderPipeline;
     mvpUniformBuffer : GPUBuffer;
     vUniformBuffer : GPUBuffer;
     mUniformBuffer : GPUBuffer;
@@ -32,72 +34,75 @@ export class ImpostorRenderer {
         this.quadNormals = CreateGPUBuffer(device, quad.normals);
         this.quadSizes = CreateGPUBuffer(device, quad.sizes);
 
-        this.pipeline = device.createRenderPipeline({
-            layout:'auto',
-            vertex: {
-                module: device.createShaderModule({                    
-                    code: shader
-                }),
-                entryPoint: "vs_main",
-                buffers:[
-                    { //position
-                        arrayStride: 4*3,
-                        stepMode: 'instance',
-                        attributes: [{
-                            shaderLocation: 0,
-                            format: "float32x3",
-                            offset: 0
-                        }]
-                    },
-                    { //color
-                        arrayStride: 4*3,
-                        stepMode: 'instance',
-                        attributes: [{
-                            shaderLocation: 1,
-                            format: "float32x3",
-                            offset: 0
-                        }]
-                    },
-                    { //normal
-                        arrayStride: 4*3,
-                        stepMode: 'instance',
-                        attributes: [{
-                            shaderLocation: 2,
-                            format: "float32x3",
-                            offset: 0
-                        }]
-                    },
-                    { //size
-                        arrayStride: 4*1,
-                        stepMode: 'instance',
-                        attributes: [{
-                            shaderLocation: 3,
-                            format: "float32",
-                            offset: 0
-                        }]
-                    }
-                ]
-            },
-            fragment: {
-                module: device.createShaderModule({                    
-                    code: shader
-                }),
-                entryPoint: "fs_main",
-                targets: [
-                    {
-                        format: format as GPUTextureFormat
-                    }
-                ]
-            },
-            primitive:{
-                topology: "triangle-list",
-            },
-            depthStencil:{
-                format: "depth32float",
-                depthWriteEnabled: true,
-                depthCompare: "less"
-            }
-        });
+        if (ImpostorRenderer.pipeline == undefined) {
+            ImpostorRenderer.pipeline = device.createRenderPipeline({
+                layout:'auto',
+                vertex: {
+                    module: device.createShaderModule({                    
+                        code: shader
+                    }),
+                    entryPoint: "vs_main",
+                    buffers:[
+                        { //position
+                            arrayStride: 4*3,
+                            stepMode: 'instance',
+                            attributes: [{
+                                shaderLocation: 0,
+                                format: "float32x3",
+                                offset: 0
+                            }]
+                        },
+                        { //color
+                            arrayStride: 4*3,
+                            stepMode: 'instance',
+                            attributes: [{
+                                shaderLocation: 1,
+                                format: "float32x3",
+                                offset: 0
+                            }]
+                        },
+                        { //normal
+                            arrayStride: 4*3,
+                            stepMode: 'instance',
+                            attributes: [{
+                                shaderLocation: 2,
+                                format: "float32x3",
+                                offset: 0
+                            }]
+                        },
+                        { //size
+                            arrayStride: 4*1,
+                            stepMode: 'instance',
+                            attributes: [{
+                                shaderLocation: 3,
+                                format: "float32",
+                                offset: 0
+                            }]
+                        }
+                    ]
+                },
+                fragment: {
+                    module: device.createShaderModule({                    
+                        code: shader
+                    }),
+                    entryPoint: "fs_main",
+                    targets: [
+                        {
+                            format: format as GPUTextureFormat
+                        }
+                    ]
+                },
+                primitive:{
+                    topology: "triangle-list",
+                },
+                depthStencil:{
+                    format: "depth32float",
+                    depthWriteEnabled: true,
+                    depthCompare: "less"
+                }
+            });
+        }
+        
 
         this.mvpUniformBuffer = device.createBuffer({
             size: 64,
@@ -120,7 +125,7 @@ export class ImpostorRenderer {
         });
 
         this.uniformBindGroup = device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(0),
+            layout: ImpostorRenderer.pipeline.getBindGroupLayout(0),
             entries: [
                 {
                     binding: 0,
@@ -154,7 +159,7 @@ export class ImpostorRenderer {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         this.drawSettingsBindGroup = device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(1),
+            layout: ImpostorRenderer.pipeline.getBindGroupLayout(1),
             entries: [
                 {
                     binding: 0,
@@ -185,6 +190,9 @@ export class ImpostorRenderer {
             normals[i*3+1] = point.normal[1];
             normals[i*3+2] = point.normal[2];
             sizes[i] = point.size;
+            
+            this.boundsMax = [Math.max(this.boundsMax[0], points[0].x), Math.max(this.boundsMax[0], points[0].y), Math.max(this.boundsMax[0], points[0].z)]
+            this.boundsMin = [Math.min(this.boundsMax[0], points[0].x), Math.min(this.boundsMax[0], points[0].y), Math.min(this.boundsMax[0], points[0].z)]
         }
         this.quadPositions = CreateGPUBuffer(device, positions);
         this.quadColors = CreateGPUBuffer(device, colors);
@@ -213,7 +221,7 @@ export class ImpostorRenderer {
         drawSettingsBuffer[11] = 0;
         device.queue.writeBuffer(this.drawSettingsBuffer, 0, drawSettingsBuffer as ArrayBuffer);
 
-        renderPass.setPipeline(this.pipeline);
+        renderPass.setPipeline(ImpostorRenderer.pipeline);
         renderPass.setBindGroup(0, this.uniformBindGroup);
         renderPass.setBindGroup(1, this.drawSettingsBindGroup);
         renderPass.setVertexBuffer(0, this.quadPositions);

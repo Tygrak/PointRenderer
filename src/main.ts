@@ -1,6 +1,6 @@
-import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData, LoadDataArrayBuffer} from './helper';
+import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData, LoadDataArrayBuffer, GetViewFrustum, CreateImpostorRendererFromVectors, CreateImpostorRendererFromPoints} from './helper';
 import shader from './shaders/basic.wgsl';
-import { vec3, mat4 } from 'gl-matrix';
+import { vec3, vec4, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
 import { ImpostorRenderer } from './impostorRenderer';
 import { AxisMesh } from './axisMesh';
@@ -104,6 +104,17 @@ async function Initialize() {
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + points.length + " points)");
             });
+        } else if (dataFileInput.files![0].name.includes(".gltf") || dataFileInput.files![0].name.includes(".glb")) {
+            let filemap: Map<string, File> = new Map<string, File>();
+            for (let i = 0; i < dataFileInput.files.length; i++) {
+                filemap.set(dataFileInput.files[i].name, dataFileInput.files[i]);
+            }
+            let loadFunc = async () => {
+                impostorRenderers = await dataLoader.LoadDataGltfFile(filemap);
+                let t1 = performance.now();
+                console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+            };
+            loadFunc();
         }
     };
 
@@ -168,14 +179,14 @@ async function Initialize() {
             return;
         }
 
-        const pMatrix = vp.projectionMatrix;
+        let pMatrix = vp.projectionMatrix;
         if (!freeCam.used && camera.tick()) {
             vMatrix = camera.matrix;
             mat4.multiply(vpMatrix, pMatrix, vMatrix);
         }
         frameId++;
 
-        let cameraPosition = camera.eye;
+        cameraPosition = camera.eye;
 
         rotation = vec3.fromValues(parseFloat(modelRotateXSlider.value), parseFloat(modelRotateYSlider.value), parseFloat(modelRotateZSlider.value));
 
@@ -189,7 +200,13 @@ async function Initialize() {
         if (freeCam.used) {
             vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, freeCam.position, vec3.add(vec3.create(), freeCam.position, freeCam.forward), freeCam.up);
             vpMatrix = vpImpostor.viewProjectionMatrix;
+            vMatrix = vpImpostor.viewMatrix;
+            pMatrix = vpImpostor.projectionMatrix;
+            cameraPosition = freeCam.position;
         }
+        let frustum = GetViewFrustum(vMatrix, pMatrix); 
+        
+
         let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
         let drawAmount = 1;
         let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
@@ -300,7 +317,7 @@ async function Initialize() {
     let mouseDown = false;
 
     if (document != null) {
-        freeCam.Initialize();
+        freeCam.Initialize(gpu.canvas);
 
         document.addEventListener('keypress', function(keyEvent: KeyboardEvent) {
             if (keyEvent.code == "KeyC") {
@@ -377,7 +394,13 @@ async function Initialize() {
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/ABeautifulGame/glTF/ABeautifulGame.gltf';
     //uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/refs/heads/main/2.0/Sponza/glTF/Sponza.gltf';
-    impostorRenderers = await dataLoader.LoadDataGltf(uri);
+    impostorRenderers = await dataLoader.LoadDataGltfUri(uri);
+
+    let svp = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, [45, 0, 0], [0,0,0], [0,1,0], 20);
+    let frustum = GetViewFrustum(svp.viewMatrix, svp.projectionMatrix);
+    let frustumPoints = dataLoader.GetPointsFromVerticesAndIndices(frustum.corners, frustum.triangles, false, false);
+    impostorRenderers.push(CreateImpostorRendererFromPoints(gpu.device, gpu.format, frustumPoints, vec3.fromValues(1, 0, 1), 2));
+    impostorRenderers.push(CreateImpostorRendererFromVectors(gpu.device, gpu.format, frustum.normalsTest, vec3.fromValues(1, 0, 0), 1));
 }
 
 Initialize();

@@ -71,9 +71,9 @@ export class FreeCamera {
         this.forward = vec3.rotateY(this.forward, this.forward, vec3.create(), this.yaw);
     }
 
-    public Initialize() {
-        document.addEventListener("mousedown", (e) => {this.OnMouseDown(e, this)});
-        document.addEventListener("mouseup", (e) => {this.OnMouseUp(e, this)});
+    public Initialize(canvas: HTMLCanvasElement) {
+        canvas.addEventListener("mousedown", (e) => {this.OnMouseDown(e, this)});
+        canvas.addEventListener("mouseup", (e) => {this.OnMouseUp(e, this)});
         document.addEventListener("mousemove", (e) => {this.OnMouseMove(e, this)});
         document.addEventListener("keypress", (e) => {this.OnKeypress(e, this)});
     }

@@ -1,7 +1,7 @@
 import { mat4, quat, vec3 } from "gl-matrix";
 import { Point } from "./point";
 import { PLYLoader } from './plyLoader';
-import { GltfLoader } from "gltf-loader-ts";
+import { GltfAsset, GltfLoader } from "gltf-loader-ts";
 import { lerp } from "./helper";
 import { ImpostorRenderer } from "./impostorRenderer";
 import { Node } from "gltf-loader-ts/lib/gltf";
@@ -17,9 +17,19 @@ export class DataLoader {
         this.format = format;
     }
 
-    public async LoadDataGltf (uri: string) {
+    public async LoadDataGltfFile(filemap: Map<string, File>) {
+        let loader = new GltfLoader();
+        let asset = await loader.loadFromFiles(filemap);
+        return this.LoadDataGltf(asset);
+    }
+
+    public async LoadDataGltfUri(uri: string) {
         let loader = new GltfLoader();
         let asset = await loader.load(uri);
+        return this.LoadDataGltf(asset);
+    }
+
+    public async LoadDataGltf(asset: GltfAsset) {
         let gltf = asset.gltf;
         await asset.preFetchAll();
         console.log(gltf);
@@ -56,7 +66,10 @@ export class DataLoader {
                     }
                     faces.push([rawIndices[n], rawIndices[n+1], rawIndices[n+2]]);
                 }
-                points.push(...this.GetPointsFromVerticesAndIndices(vertices, faces, false, false, [], normals));
+                let meshPoints = this.GetPointsFromVerticesAndIndices(vertices, faces, false, false, [], normals);
+                for (let point = 0; point < meshPoints.length; point++) {
+                    points.push(meshPoints[point]);
+                }
             }
             meshesPoints.push(points);
         }
@@ -101,7 +114,7 @@ export class DataLoader {
         return impostorRenderers; 
     }
 
-    public ConvertBufferToNumbers (buffer: Uint8Array, componentType: number, count: number) {
+    public ConvertBufferToNumbers(buffer: Uint8Array, componentType: number, count: number) {
         let numbers: number[] = [];
         let view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         /*
@@ -141,7 +154,7 @@ export class DataLoader {
         return numbers;
     }
 
-    public LoadDataObj (dataString: string, scale: number = 1, normalizeSize = true) {
+    public LoadDataObj(dataString: string, scale: number = 1, normalizeSize = true) {
         let lines = dataString.split("\n");
         let vertices: vec3[] = [];
         let faces: number[][] = [];
@@ -163,7 +176,7 @@ export class DataLoader {
         return this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize);
     }
 
-    public LoadDataPly (dataBuffer: ArrayBuffer, scale: number = 1, normalizeSize = true) {
+    public LoadDataPly(dataBuffer: ArrayBuffer, scale: number = 1, normalizeSize = true) {
         let loader = new PLYLoader();
         let result = loader.parse(dataBuffer);
         console.log(result);
@@ -193,7 +206,7 @@ export class DataLoader {
         return points;
     }
 
-    public MoveVerticesMeanToOrigin (vertices: vec3[]) {
+    public MoveVerticesMeanToOrigin(vertices: vec3[]) {
         let sums = {x: 0, y: 0, z: 0};
         for (let i = 0; i < vertices.length; i++) {
             sums.x += vertices[i][0];
@@ -207,7 +220,7 @@ export class DataLoader {
         }
     }
 
-    public NormalizeVerticesSize (vertices: vec3[]) {
+    public NormalizeVerticesSize(vertices: vec3[]) {
         let limitMaxSize = 0;
         for (let i = 0; i < vertices.length; i++) {
             limitMaxSize = Math.max(limitMaxSize, Math.max(Math.max(vertices[i][0], vertices[i][1]), vertices[i][2]));
@@ -219,7 +232,7 @@ export class DataLoader {
         }
     }
 
-    public GetPointsFromVerticesAndNormals (vertices: vec3[], normals: vec3[], moveToOrigin = true, normalizeSize = true, colors: vec3[] = []) {
+    public GetPointsFromVerticesAndNormals(vertices: vec3[], normals: vec3[], moveToOrigin = true, normalizeSize = true, colors: vec3[] = []) {
         let points : Point[] = [];
         if (moveToOrigin) {
             this.MoveVerticesMeanToOrigin(vertices);
@@ -239,7 +252,7 @@ export class DataLoader {
         return points;
     }
 
-    public GeneratePointsWithinTriangle (vertices: vec3[], colors: vec3[] = [], normals: vec3[] = []) {
+    public GeneratePointsWithinTriangle(vertices: vec3[], colors: vec3[] = [], normals: vec3[] = []) {
         let points : Point[] = [];
         const v0 = vertices[0];
         const v1 = vertices[1];
@@ -282,7 +295,7 @@ export class DataLoader {
         return points;
     }
 
-    public GetPointsFromVerticesAndIndices (vertices: vec3[], faces: number[][], moveToOrigin = true,  normalizeSize = true, colors: vec3[] = [], normals: vec3[] = []) {
+    public GetPointsFromVerticesAndIndices(vertices: vec3[], faces: number[][], moveToOrigin = true,  normalizeSize = true, colors: vec3[] = [], normals: vec3[] = []) {
         let points : Point[] = [];
         let limitMaxSize = 0;
         if (moveToOrigin) {
