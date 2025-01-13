@@ -46,7 +46,7 @@ export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2
         cameraOption,
         far
     }
-};
+}; //https://iquilezles.org/articles/frustum/
 
 export function GetViewFrustum(vMatrix: mat4, pMatrix: mat4) {
     let corners: vec3[] = [];
@@ -77,10 +77,13 @@ export function GetViewFrustum(vMatrix: mat4, pMatrix: mat4) {
     triangles.push([1, 5, 3]);
     triangles.push([7, 5, 3]);
     let normals: vec3[] = [];
+    let planes: vec4[] = [];
     for (let i = 0; i < triangles.length; i+=2) {
-        normals.push(vec3.normalize(vec3.create(), vec3.cross(vec3.create(), vec3.subtract(vec3.create(), corners[triangles[i][1]], corners[triangles[i][0]]), vec3.subtract(vec3.create(), corners[triangles[i][2]], corners[triangles[i][0]]))));
+        let normal = vec3.normalize(vec3.create(), vec3.cross(vec3.create(), vec3.subtract(vec3.create(), corners[triangles[i][1]], corners[triangles[i][0]]), vec3.subtract(vec3.create(), corners[triangles[i][2]], corners[triangles[i][0]])));
+        normals.push(normal);
+        let onPlane = corners[triangles[i][0]];
+        planes.push(vec4.fromValues(normal[0], normal[1], normal[2], -(onPlane[0]*normal[0]+onPlane[1]*normal[1]+onPlane[2]*normal[2])));
     }
-    //normals.push(vec3.normalize(vec3.create(), vec3.cross(vec3.create(), vec3.subtract(vec3.create(), corners[1], corners[0]), vec3.subtract(vec3.create(), corners[2], corners[0]))));
     let normalsTest: vec3[] = [];
     for (let i = 0; i < normals.length; i++) {
         let center = vec3.scale(vec3.create(),
@@ -94,7 +97,7 @@ export function GetViewFrustum(vMatrix: mat4, pMatrix: mat4) {
         normalsTest.push(vec3.add(vec3.create(), vec3.scale(vec3.create(), normals[i], 3), center));
         normalsTest.push(vec3.add(vec3.create(), vec3.scale(vec3.create(), normals[i], 4), center));
     }
-    return {corners, normals, triangles, normalsTest};
+    return {corners, normals, triangles, planes, normalsTest};
 }
 
 export function CreateImpostorRendererFromVectors(device: GPUDevice, format: GPUTextureFormat, vectors: vec3[], color: vec3 = vec3.fromValues(1, 1, 1), size: number = 1) {

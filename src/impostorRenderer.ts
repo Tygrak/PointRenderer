@@ -3,6 +3,7 @@ import { CreateGPUBuffer } from "./helper";
 import { CreateQuadGeometry } from "./meshHelpers";
 import shader from './shaders/impostor.wgsl';
 import { Point } from "./point";
+import { AABB } from "./aabb";
 
 export class ImpostorRenderer {
     pointsCount : number = 1;
@@ -10,8 +11,7 @@ export class ImpostorRenderer {
     billBoardMode = 0;
     time = 0;
     lightDir = [0.2, 1, 0];
-    boundsMin = [1000000000, 1000000000, 1000000000];
-    boundsMax = [-1000000000, -1000000000, -1000000000];
+    aabb: AABB = new AABB([0,0,0], [1,1,1]);
     modelMatrix : mat4 = mat4.identity(mat4.create());
     quadPositions : GPUBuffer;
     quadColors : GPUBuffer;
@@ -177,6 +177,8 @@ export class ImpostorRenderer {
         let colors = new Float32Array(this.pointsCount*3);
         let normals = new Float32Array(this.pointsCount*3);
         let sizes = new Float32Array(this.pointsCount*1);
+        let boundsMin = vec3.fromValues(1000000000, 1000000000, 1000000000);
+        let boundsMax = vec3.fromValues(-1000000000, -1000000000, -1000000000);
         for (let i = 0; i < points.length; i++) {
             const point = points[i];
             let quad = CreateQuadGeometry(point);
@@ -191,9 +193,10 @@ export class ImpostorRenderer {
             normals[i*3+2] = point.normal[2];
             sizes[i] = point.size;
             
-            this.boundsMax = [Math.max(this.boundsMax[0], points[0].x), Math.max(this.boundsMax[0], points[0].y), Math.max(this.boundsMax[0], points[0].z)]
-            this.boundsMin = [Math.min(this.boundsMax[0], points[0].x), Math.min(this.boundsMax[0], points[0].y), Math.min(this.boundsMax[0], points[0].z)]
+            boundsMax = [Math.max(boundsMax[0], points[0].x), Math.max(boundsMax[0], points[0].y), Math.max(boundsMax[0], points[0].z)]
+            boundsMin = [Math.min(boundsMax[0], points[0].x), Math.min(boundsMax[0], points[0].y), Math.min(boundsMax[0], points[0].z)]
         }
+        this.aabb = new AABB(boundsMin, boundsMax);
         this.quadPositions = CreateGPUBuffer(device, positions);
         this.quadColors = CreateGPUBuffer(device, colors);
         this.quadNormals = CreateGPUBuffer(device, normals);
