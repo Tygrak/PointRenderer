@@ -29,8 +29,10 @@ const defaultColorRInput = document.getElementById("defaultColorRInput") as HTML
 const defaultColorGInput = document.getElementById("defaultColorGInput") as HTMLInputElement;
 const defaultColorBInput = document.getElementById("defaultColorBInput") as HTMLInputElement;
 
-const fpsCounterElement = document.getElementById("fpsCounter") as HTMLParagraphElement;
-const pointsCounterElement = document.getElementById("pointsCounter") as HTMLParagraphElement;
+const renderMsElement = document.getElementById("renderMsCounter") as HTMLElement;
+const jsMsCounterElement = document.getElementById("frameMsCounter") as HTMLElement;
+const pointsCounterElement = document.getElementById("pointsCounter") as HTMLElement;
+const pointsRenderedCounterElement = document.getElementById("pointsRenderedCounter") as HTMLElement;
 const overlayMessageElement = document.getElementById("overlayMessage") as HTMLParagraphElement;
 
 let axisMesh: AxisMesh;
@@ -169,9 +171,11 @@ async function Initialize() {
     }
 
     let previousFrameDeltaTimesMs: number[] = new Array<number>(60).fill(15);
+    let previousJsDeltaTimesMs: number[] = new Array<number>(60).fill(15);
     let frameId = 0;
 
     let startTime = performance.now();
+    let lastFrameTime = performance.now();
     let gpuTime = 0;
 
     function draw() {
@@ -204,16 +208,21 @@ async function Initialize() {
             pMatrix = vpImpostor.projectionMatrix;
             cameraPosition = freeCam.position;
         }
-        let frustum = GetViewFrustum(vMatrix, pMatrix); 
+        let frustum = GetViewFrustum(vMatrix, pMatrix);
+        let frustumPlanes = frustum.planes;
         
-
         let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
         let drawAmount = 1;
         let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
         let pointsCount = 0;
+        let renderedCount = 0;
         for (let i = 0; i < impostorRenderers.length; i++) {
             let impostorRenderer = impostorRenderers[i];
             pointsCount += impostorRenderer.pointsCount;
+            if (!impostorRenderer.aabb.ShouldRenderForFrustum(frustumPlanes, impostorRenderer.modelMatrix)) {
+                continue;
+            }
+            renderedCount += impostorRenderer.pointsCount;
             let modelMatrix = impostorRenderer.modelMatrix;
             if (impostorRenderers.length == 1) {
                 CreateModelMatrix(modelMatrix, [0,0,0], rotation);
@@ -243,7 +252,11 @@ async function Initialize() {
         
         device.queue.submit([commandEncoder.finish()]);
         
+        previousJsDeltaTimesMs[frameId%previousJsDeltaTimesMs.length] = performance.now()-lastFrameTime;
+        jsMsCounterElement.innerText = (previousJsDeltaTimesMs.reduce((acc, c) => acc+c)/previousJsDeltaTimesMs.length).toFixed(3) + "ms (js)";
+        lastFrameTime = performance.now();
         pointsCounterElement.innerText = pointsCount.toFixed(0) + " points";
+        pointsRenderedCounterElement.innerText = renderedCount.toFixed(0) + " rendered";
         //read query buffer with timestamps
         if (gpu.timestampsEnabled && timestampBuffers.resultBuffer.mapState === 'unmapped') {
             const size = timestampBuffers.queryBuffer.size;
@@ -256,10 +269,10 @@ async function Initialize() {
                 const timingsNanoseconds = new BigInt64Array(arrayBuffer);
                 const frameTimeMs = Number((timingsNanoseconds[1]-timingsNanoseconds[0])/BigInt(1000))/1000;
                 previousFrameDeltaTimesMs[currFrame%previousFrameDeltaTimesMs.length] = frameTimeMs;
-                fpsCounterElement.innerText = (previousFrameDeltaTimesMs.reduce((acc, c) => acc+c)/previousFrameDeltaTimesMs.length).toFixed(3) + "ms";
+                renderMsElement.innerText = (previousFrameDeltaTimesMs.reduce((acc, c) => acc+c)/previousFrameDeltaTimesMs.length).toFixed(3) + "ms";
             });
         } else {
-            fpsCounterElement.innerText = "timestamps not enabled";
+            renderMsElement.innerText = "timestamps not enabled";
         }
     }
     

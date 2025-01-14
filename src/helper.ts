@@ -46,7 +46,20 @@ export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2
         cameraOption,
         far
     }
-}; //https://iquilezles.org/articles/frustum/
+}; 
+
+//https://iquilezles.org/articles/frustum/
+/*
+export function GetViewFrustumPlanes(matrix: mat4) {
+    return [
+        vec4.fromValues(matrix[12]-matrix[0], matrix[13]-matrix[1], matrix[14]-matrix[2], matrix[15]-matrix[3]),
+        vec4.fromValues(matrix[12]+matrix[0], matrix[13]+matrix[1], matrix[14]+matrix[2], matrix[15]+matrix[3]),
+        vec4.fromValues(matrix[12]+matrix[4], matrix[13]+matrix[5], matrix[14]+matrix[6], matrix[15]+matrix[7]),
+        vec4.fromValues(matrix[12]-matrix[4], matrix[13]-matrix[5], matrix[14]-matrix[6], matrix[15]-matrix[7]),
+        vec4.fromValues(matrix[12]-matrix[8], matrix[13]-matrix[9], matrix[14]-matrix[10], matrix[15]-matrix[11]),
+        vec4.fromValues(matrix[12]+matrix[8], matrix[13]+matrix[9], matrix[14]+matrix[10], matrix[15]+matrix[11]),
+    ];
+}*/
 
 export function GetViewFrustum(vMatrix: mat4, pMatrix: mat4) {
     let corners: vec3[] = [];

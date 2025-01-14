@@ -14,36 +14,44 @@ export class AABB {
         this.extents = vec3.subtract(vec3.create(), max, this.center);
     }
 
-    public InFrustum(camFrustum: vec3[], transform: mat4) {
-        //Get global scale thanks to our transform
-        let globalCenter = vec4.transformMat4(vec4.create(), vec4.fromValues(this.center[0], this.center[1], this.center[2], 1), transform);
-    
-        //todo
-        /*// Scaled orientation
-        const glm::vec3 right = transform.getRight() * extents.x;
-        const glm::vec3 up = transform.getUp() * extents.y;
-        const glm::vec3 forward = transform.getForward() * extents.z;
-    
-        const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, right)) +
-            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, up)) +
-            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forward));
-    
-        const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, right)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, up)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forward));
-    
-        const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, right)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, up)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forward));
-    
-        //We not need to divise scale because it's based on the half extention of the AABB
-        const AABB globalAABB(globalCenter, newIi, newIj, newIk);
-    
-        return (globalAABB.isOnOrForwardPlane(camFrustum.leftFace) &&
-            globalAABB.isOnOrForwardPlane(camFrustum.rightFace) &&
-            globalAABB.isOnOrForwardPlane(camFrustum.topFace) &&
-            globalAABB.isOnOrForwardPlane(camFrustum.bottomFace) &&
-            globalAABB.isOnOrForwardPlane(camFrustum.nearFace) &&
-            globalAABB.isOnOrForwardPlane(camFrustum.farFace));*/
-    };
+    public ShouldRenderForFrustum(camFrustumPlanes: vec4[], transform: mat4) {
+        return this.TransformAABB(transform).IsPartlyInFrustum(camFrustumPlanes);
+    }
+
+    public TransformAABB(transform: mat4) {
+        let corners = [
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.min[0], this.min[1], this.min[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.max[0], this.min[1], this.min[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.min[0], this.max[1], this.min[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.max[0], this.max[1], this.min[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.min[0], this.min[1], this.max[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.max[0], this.min[1], this.max[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.min[0], this.max[1], this.max[2]), transform),
+            vec3.transformMat4(vec3.create(), vec3.fromValues(this.max[0], this.max[1], this.max[2]), transform),
+        ];
+        let boundsMax = vec3.fromValues(-1000000, -1000000, -1000000);
+        let boundsMin = vec3.fromValues(1000000, 1000000, 1000000);
+        for (let i = 0; i < corners.length; i++) {
+            boundsMax = [Math.max(boundsMax[0], corners[i][0]), Math.max(boundsMax[1], corners[i][1]), Math.max(boundsMax[2], corners[i][2])]
+            boundsMin = [Math.min(boundsMin[0], corners[i][0]), Math.min(boundsMin[1], corners[i][1]), Math.min(boundsMin[2], corners[i][2])]
+        }
+        return new AABB(boundsMin, boundsMax);
+    }
+
+    public IsPartlyInFrustum(camFrustumPlanes: vec4[]) {
+        for (let i = 0; i < camFrustumPlanes.length; i++) {
+            const plane = camFrustumPlanes[i];
+            if ((vec4.dot(plane, vec4.fromValues(this.min[0], this.min[1], this.min[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.max[0], this.min[1], this.min[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.min[0], this.max[1], this.min[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.max[0], this.max[1], this.min[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.min[0], this.min[1], this.max[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.max[0], this.min[1], this.max[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.min[0], this.max[1], this.max[2], 1.0)) < 0.0) &&
+                (vec4.dot(plane, vec4.fromValues(this.max[0], this.max[1], this.max[2], 1.0)) < 0.0)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

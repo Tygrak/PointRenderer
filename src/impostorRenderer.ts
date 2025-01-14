@@ -193,8 +193,8 @@ export class ImpostorRenderer {
             normals[i*3+2] = point.normal[2];
             sizes[i] = point.size;
             
-            boundsMax = [Math.max(boundsMax[0], points[0].x), Math.max(boundsMax[0], points[0].y), Math.max(boundsMax[0], points[0].z)]
-            boundsMin = [Math.min(boundsMax[0], points[0].x), Math.min(boundsMax[0], points[0].y), Math.min(boundsMax[0], points[0].z)]
+            boundsMax = [Math.max(boundsMax[0], point.x+point.size), Math.max(boundsMax[1], point.y+point.size), Math.max(boundsMax[2], point.z+point.size)]
+            boundsMin = [Math.min(boundsMin[0], point.x-point.size), Math.min(boundsMin[1], point.y-point.size), Math.min(boundsMin[2], point.z-point.size)]
         }
         this.aabb = new AABB(boundsMin, boundsMax);
         this.quadPositions = CreateGPUBuffer(device, positions);
