@@ -21,6 +21,7 @@ export function CreateModelMatrix(out: mat4, translation:vec3 = [0,0,0], rotatio
     mat4.multiply(out, rotateYMat, out);        
     mat4.multiply(out, rotateZMat, out);
     mat4.multiply(out, translateMat, out);
+    return out;
 };
 
 export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2, 2, 4], center:vec3 = [0, 0, 0], upDirection:vec3 = [0, 1, 0], far = 5000) {

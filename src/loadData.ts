@@ -11,7 +11,7 @@ export class DataLoader {
     device: GPUDevice;
     format: GPUTextureFormat;
     MaxTrianglePoints = 5;
-    SplitPointsThreshold = 5000;
+    SplitPointsThreshold = 10000;
     DefaultColor = vec3.fromValues(1.0, 1.0, 1.0);
 
     constructor (device: GPUDevice, format: GPUTextureFormat) {
@@ -93,7 +93,7 @@ export class DataLoader {
                 let pointsGroups = this.SplitPointsIntoGroups(meshesPoints[node.mesh]);
                 for (let i = 0; i < pointsGroups.length; i++) {
                     let impostorRenderer = new ImpostorRenderer(this.device, this.format);
-                    impostorRenderer.modelMatrix = mMatrix;
+                    impostorRenderer.SetModelMatrix(mMatrix);
                     impostorRenderer.LoadPoints(this.device, pointsGroups[i]);
                     impostorRenderers.push(impostorRenderer);
                 }
@@ -178,7 +178,15 @@ export class DataLoader {
             }
         }
 
-        return this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize);
+        let points = this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize);
+        let renderers: ImpostorRenderer[] = [];
+        let groups = this.SplitPointsIntoGroups(points);
+        for (let i = 0; i < groups.length; i++) {
+            let renderer = new ImpostorRenderer(this.device, this.format);
+            renderer.LoadPoints(this.device, groups[i]);
+            renderers.push(renderer);
+        }
+        return renderers;
     }
 
     public LoadDataPly(dataBuffer: ArrayBuffer, scale: number = 1, normalizeSize = true) {
@@ -208,7 +216,14 @@ export class DataLoader {
             points = this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize, colors);
         }
 
-        return points;
+        let renderers: ImpostorRenderer[] = [];
+        let groups = this.SplitPointsIntoGroups(points);
+        for (let i = 0; i < groups.length; i++) {
+            let renderer = new ImpostorRenderer(this.device, this.format);
+            renderer.LoadPoints(this.device, groups[i]);
+            renderers.push(renderer);
+        }
+        return renderers;
     }
 
     public MoveVerticesMeanToOrigin(vertices: vec3[]) {

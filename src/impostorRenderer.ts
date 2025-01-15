@@ -12,6 +12,8 @@ export class ImpostorRenderer {
     time = 0;
     lightDir = [0.2, 1, 0];
     aabb: AABB = new AABB([0,0,0], [1,1,1]);
+    worldAabb: AABB = new AABB([0,0,0], [1,1,1]);
+    isStatic = true;
     modelMatrix : mat4 = mat4.identity(mat4.create());
     quadPositions : GPUBuffer;
     quadColors : GPUBuffer;
@@ -197,10 +199,18 @@ export class ImpostorRenderer {
             boundsMin = [Math.min(boundsMin[0], point.x-point.size), Math.min(boundsMin[1], point.y-point.size), Math.min(boundsMin[2], point.z-point.size)]
         }
         this.aabb = new AABB(boundsMin, boundsMax);
+        this.worldAabb = this.aabb.TransformAABB(this.modelMatrix);
         this.quadPositions = CreateGPUBuffer(device, positions);
         this.quadColors = CreateGPUBuffer(device, colors);
         this.quadNormals = CreateGPUBuffer(device, normals);
         this.quadSizes = CreateGPUBuffer(device, sizes);
+    }
+
+    public SetModelMatrix(modelMatrix: mat4) {
+        this.modelMatrix = modelMatrix;
+        if (this.isStatic) {
+            this.worldAabb = this.aabb.TransformAABB(modelMatrix);
+        }
     }
 
     public Draw(device: GPUDevice, renderPass : GPURenderPassEncoder, mvpMatrix: mat4, vMatrix: mat4, modelMatrix: mat4, cameraPos: vec3, percentageShown: number, sizeScale: number) {

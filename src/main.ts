@@ -88,23 +88,15 @@ async function Initialize() {
 
         if (dataFileInput.files![0].name.includes(".obj")) {
             LoadData(dataFileInput.files[0], (text: string) => {
-                let points = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
-                let impostorRenderer = new ImpostorRenderer(device, gpu.format);
-                impostorRenderer.LoadPoints(device, points);
-                impostorRenderers = [impostorRenderer];
+                impostorRenderers = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
-                console.log("(" + points.length + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".ply")) {
             LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
-                let points = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
-                let impostorRenderer = new ImpostorRenderer(device, gpu.format);
-                impostorRenderer.LoadPoints(device, points);
-                impostorRenderers = [impostorRenderer];
+                impostorRenderers = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
-                console.log("(" + points.length + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".gltf") || dataFileInput.files![0].name.includes(".glb")) {
             let filemap: Map<string, File> = new Map<string, File>();
@@ -211,6 +203,8 @@ async function Initialize() {
         let frustum = GetViewFrustum(vMatrix, pMatrix);
         let frustumPlanes = frustum.planes;
         
+        let rotationMatrix = CreateModelMatrix(mat4.create(), [0,0,0], rotation);
+        rotationMatrix = mat4.mul(rotationMatrix, vpMatrix, rotationMatrix);
         let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
         let drawAmount = 1;
         let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
@@ -219,15 +213,14 @@ async function Initialize() {
         for (let i = 0; i < impostorRenderers.length; i++) {
             let impostorRenderer = impostorRenderers[i];
             pointsCount += impostorRenderer.pointsCount;
-            if (!impostorRenderer.aabb.ShouldRenderForFrustum(frustumPlanes, impostorRenderer.modelMatrix)) {
+            if (!impostorRenderer.isStatic && !impostorRenderer.aabb.ShouldRenderForFrustum(frustumPlanes, impostorRenderer.modelMatrix)) {
+                continue;
+            } else if (impostorRenderer.isStatic && !impostorRenderer.worldAabb.IsPartlyInFrustum(frustumPlanes)) {
                 continue;
             }
             renderedCount += impostorRenderer.pointsCount;
             let modelMatrix = impostorRenderer.modelMatrix;
-            if (impostorRenderers.length == 1) {
-                CreateModelMatrix(modelMatrix, [0,0,0], rotation);
-            }
-            mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
+            mat4.multiply(mvpMatrix, rotationMatrix, modelMatrix);
             if (rotateLightCheckbox.checked) {
                 impostorRenderer.lightDir = [Math.sin((performance.now()-startTime)/1000.0), 1, Math.cos((performance.now()-startTime)/1000.0)];
             }
@@ -252,7 +245,9 @@ async function Initialize() {
         
         device.queue.submit([commandEncoder.finish()]);
         
-        previousJsDeltaTimesMs[frameId%previousJsDeltaTimesMs.length] = performance.now()-lastFrameTime;
+        if (performance.now()-lastFrameTime < 2000) {
+            previousJsDeltaTimesMs[frameId%previousJsDeltaTimesMs.length] = performance.now()-lastFrameTime;
+        }
         jsMsCounterElement.innerText = (previousJsDeltaTimesMs.reduce((acc, c) => acc+c)/previousJsDeltaTimesMs.length).toFixed(3) + "ms (js)";
         lastFrameTime = performance.now();
         pointsCounterElement.innerText = pointsCount.toFixed(0) + " points";
