@@ -1,4 +1,5 @@
 import { vec3, vec4, mat4 } from "gl-matrix";
+import { Point } from "./point";
 
 export class AABB {
     min: vec3;
@@ -16,6 +17,17 @@ export class AABB {
 
     public ShouldRenderForFrustum(camFrustumPlanes: vec4[], transform: mat4) {
         return this.TransformAABB(transform).IsPartlyInFrustum(camFrustumPlanes);
+    }
+
+    static GetFromPoints(points: Point[]) {
+        let boundsMin = vec3.fromValues(1000000000, 1000000000, 1000000000);
+        let boundsMax = vec3.fromValues(-1000000000, -1000000000, -1000000000);
+        for (let i = 0; i < points.length; i++) {
+            const point = points[i];
+            boundsMax = [Math.max(boundsMax[0], point.x+point.size), Math.max(boundsMax[1], point.y+point.size), Math.max(boundsMax[2], point.z+point.size)]
+            boundsMin = [Math.min(boundsMin[0], point.x-point.size), Math.min(boundsMin[1], point.y-point.size), Math.min(boundsMin[2], point.z-point.size)]
+        }
+        return new AABB(boundsMin, boundsMax);
     }
 
     public TransformAABB(transform: mat4) {

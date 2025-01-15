@@ -5,11 +5,13 @@ import { GltfAsset, GltfLoader } from "gltf-loader-ts";
 import { lerp } from "./helper";
 import { ImpostorRenderer } from "./impostorRenderer";
 import { Node } from "gltf-loader-ts/lib/gltf";
+import { AABB } from "./aabb";
 
 export class DataLoader {
     device: GPUDevice;
     format: GPUTextureFormat;
     MaxTrianglePoints = 5;
+    SplitPointsThreshold = 5000;
     DefaultColor = vec3.fromValues(1.0, 1.0, 1.0);
 
     constructor (device: GPUDevice, format: GPUTextureFormat) {
@@ -88,10 +90,13 @@ export class DataLoader {
                 mat4.scale(mMatrix, mMatrix, vec3.fromValues(node.scale[0], node.scale[1], node.scale[2]));
             }
             if (node.mesh != undefined) {
-                let impostorRenderer = new ImpostorRenderer(this.device, this.format);
-                impostorRenderer.modelMatrix = mMatrix;
-                impostorRenderer.LoadPoints(this.device, meshesPoints[node.mesh]);
-                impostorRenderers.push(impostorRenderer);
+                let pointsGroups = this.SplitPointsIntoGroups(meshesPoints[node.mesh]);
+                for (let i = 0; i < pointsGroups.length; i++) {
+                    let impostorRenderer = new ImpostorRenderer(this.device, this.format);
+                    impostorRenderer.modelMatrix = mMatrix;
+                    impostorRenderer.LoadPoints(this.device, pointsGroups[i]);
+                    impostorRenderers.push(impostorRenderer);
+                }
             }
             if (node.children != undefined) {
                 for (let i = 0; i < node.children.length; i++) {
@@ -110,7 +115,7 @@ export class DataLoader {
                 impostorRenderers.push(...ConvertNodeToRenderers(node, mat4.identity(mat4.create())));
             }
         }
-        console.log(meshesPoints);
+        console.log(impostorRenderers);
         return impostorRenderers; 
     }
 
@@ -348,5 +353,54 @@ export class DataLoader {
             }
         }
         return points;
+    }
+
+    //todo: optimize
+    public SplitPointsInHalf(points: Point[]) {
+        if (points.length < 50) {
+            return [points];
+        }
+        let halfId = Math.floor(points.length/2);
+        points.sort((a, b) => a.x-b.x);
+        let centerX = points[halfId];
+        points.sort((a, b) => a.y-b.y);
+        let centerY = points[halfId];
+        points.sort((a, b) => a.z-b.z);
+        let centerZ = points[halfId];
+        let aabb = AABB.GetFromPoints(points);
+        let distanceX = vec3.dist(centerX.GetPosition(), aabb.center);
+        let distanceY = vec3.dist(centerY.GetPosition(), aabb.center);
+        let distanceZ = vec3.dist(centerZ.GetPosition(), aabb.center);
+        if (distanceZ <= distanceX && distanceZ <= distanceY) {
+            return [points.slice(0, halfId), points.slice(halfId)];
+        } else if (distanceY <= distanceX && distanceY <= distanceZ) {
+            points.sort((a, b) => a.y-b.y);
+            return [points.slice(0, halfId), points.slice(halfId)];
+        } else {
+            points.sort((a, b) => a.x-b.x);
+            return [points.slice(0, halfId), points.slice(halfId)];
+        }
+    }
+
+    public SplitPointsIntoGroups(points: Point[]) {
+        let groups: Point[][] = [points];
+        if (points.length < this.SplitPointsThreshold) {
+            return groups;
+        }
+        let split = false;
+        while (true) {
+            for (let i = groups.length-1; i >= 0; i--) {
+                if (groups[i].length > this.SplitPointsThreshold) {
+                    let newGroups = this.SplitPointsInHalf(groups[i]);
+                    groups.splice(i, 1, ...newGroups);
+                    split = true;
+                }
+            }
+            if (!split) {
+                break;
+            }
+            split = false;
+        }
+        return groups; 
     }
 }
