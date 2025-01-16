@@ -6,17 +6,56 @@ import { lerp } from "./helper";
 import { ImpostorRenderer } from "./impostorRenderer";
 import { Node } from "gltf-loader-ts/lib/gltf";
 import { AABB } from "./aabb";
+import { LASLoader } from "@loaders.gl/las";
 
 export class DataLoader {
     device: GPUDevice;
     format: GPUTextureFormat;
     MaxTrianglePoints = 5;
-    SplitPointsThreshold = 10000;
+    SplitPointsThreshold = 100000;
     DefaultColor = vec3.fromValues(1.0, 1.0, 1.0);
+    //NormalizeScale = true;
 
     constructor (device: GPUDevice, format: GPUTextureFormat) {
         this.device = device;
         this.format = format;
+    }
+
+    public async LoadDataLas(data: ArrayBuffer) {
+        let mesh = await LASLoader.parse(data, {las: {skip: 2}, worker: false});
+        console.log("las vertex count:" + mesh.header.vertexCount);
+        console.log(mesh);
+        console.log("las points:" + mesh.attributes["POSITION"].value.length);
+        let vertices: vec3[] = [];
+        let colors: vec3[] = [];
+        for (let i = 0; i < mesh.attributes["POSITION"].value.length; i+=3) {
+            vertices.push(vec3.fromValues(mesh.attributes["POSITION"].value[i], mesh.attributes["POSITION"].value[i+2], mesh.attributes["POSITION"].value[i+1]));
+        }
+        if (mesh.attributes["COLOR_0"] != undefined) {
+            for (let i = 0; i < mesh.attributes["COLOR_0"].value.length; i+=4) {
+                colors.push(vec3.fromValues(mesh.attributes["COLOR_0"].value[i]/255, mesh.attributes["COLOR_0"].value[i+1]/255, mesh.attributes["COLOR_0"].value[i+2]/255));
+            }
+        }
+        if (colors.length == 0 && mesh.attributes["classification"] != undefined) {
+            for (let i = 0; i < mesh.attributes["classification"].value.length; i++) {
+                let classification = mesh.attributes["classification"].value[i];
+                if (classification == 2) { //Bare-earth and low grass
+                    colors.push(vec3.fromValues(0.15, 0.75, 0.05));
+                } else if (classification == 3) { //Low vegetation (height <2m)
+                    colors.push(vec3.fromValues(0.05, 0.995, 0.05));
+                } else if (classification == 4) { //High vegetation (height >2m)
+                    colors.push(vec3.fromValues(0.45, 0.65, 0.45));
+                } else if (classification == 5) { //Water
+                    colors.push(vec3.fromValues(0.25, 0.25, 0.985));
+                } else if (classification == 6) { //Buildings
+                    colors.push(vec3.fromValues(0.95, 0.95, 0.95));
+                } else { //other
+                    colors.push(vec3.fromValues(0.5, 0.5, 0.5));
+                }
+            }
+        }
+        let points = this.GetPointsFromVerticesAndNormals(vertices, [], true, false, colors);
+        return this.MakeGroupRenderersFromPoints(points);
     }
 
     public async LoadDataGltfFile(filemap: Map<string, File>) {
@@ -179,14 +218,7 @@ export class DataLoader {
         }
 
         let points = this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize);
-        let renderers: ImpostorRenderer[] = [];
-        let groups = this.SplitPointsIntoGroups(points);
-        for (let i = 0; i < groups.length; i++) {
-            let renderer = new ImpostorRenderer(this.device, this.format);
-            renderer.LoadPoints(this.device, groups[i]);
-            renderers.push(renderer);
-        }
-        return renderers;
+        return this.MakeGroupRenderersFromPoints(points);
     }
 
     public LoadDataPly(dataBuffer: ArrayBuffer, scale: number = 1, normalizeSize = true) {
@@ -216,6 +248,10 @@ export class DataLoader {
             points = this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize, colors);
         }
 
+        return this.MakeGroupRenderersFromPoints(points);
+    }
+
+    public MakeGroupRenderersFromPoints(points: Point[]) {
         let renderers: ImpostorRenderer[] = [];
         let groups = this.SplitPointsIntoGroups(points);
         for (let i = 0; i < groups.length; i++) {
@@ -260,8 +296,12 @@ export class DataLoader {
         if (normalizeSize) {
             this.NormalizeVerticesSize(vertices);
         }
+        let normal = vec3.fromValues(0, 1, 0);
         for (let i = 0; i < vertices.length; i++) {
-            let point = new Point(vertices[i][0], vertices[i][1], vertices[i][2], normals[i][0], normals[i][1], normals[i][2]);
+            if (normals.length > i) {
+                normal = normals[i];
+            }
+            let point = new Point(vertices[i][0], vertices[i][1], vertices[i][2], normal[0], normal[1], normal[2]);
             if (colors.length > i) {
                 point.r = colors[i][0]; point.g = colors[i][1]; point.b = colors[i][2];
             } else {

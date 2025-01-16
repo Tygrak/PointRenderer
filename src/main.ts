@@ -112,6 +112,13 @@ async function Initialize() {
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             };
             loadFunc();
+        } else if (dataFileInput.files![0].name.includes(".las") || dataFileInput.files![0].name.includes(".laz")) {
+            LoadDataArrayBuffer(dataFileInput.files[0], async (buffer: ArrayBuffer) => {
+                impostorRenderers = await dataLoader.LoadDataLas(buffer);
+                let t1 = performance.now();
+                console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+                console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
+            });
         }
     };
 
