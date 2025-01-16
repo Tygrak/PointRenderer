@@ -91,12 +91,14 @@ async function Initialize() {
                 impostorRenderers = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+                console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".ply")) {
             LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
                 impostorRenderers = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+                console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".gltf") || dataFileInput.files![0].name.includes(".glb")) {
             let filemap: Map<string, File> = new Map<string, File>();
@@ -107,6 +109,7 @@ async function Initialize() {
                 impostorRenderers = await dataLoader.LoadDataGltfFile(filemap);
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
+                console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             };
             loadFunc();
         }
@@ -179,6 +182,8 @@ async function Initialize() {
         if (!freeCam.used && camera.tick()) {
             vMatrix = camera.matrix;
             mat4.multiply(vpMatrix, pMatrix, vMatrix);
+        } else if (freeCam.used) {
+            freeCam.Update((performance.now()-lastFrameTime)/1000);
         }
         frameId++;
 

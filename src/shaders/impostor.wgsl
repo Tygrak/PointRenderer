@@ -71,7 +71,8 @@ fn vs_main(@builtin(vertex_index) index: u32, @builtin(instance_index) instance:
     let group = f32(instance)*1.1;
     let dir1 = normalize(vec3(rand(vec2(group*1.0771, group*1.73)), rand(vec2(group*2.0771, group*3.73)), rand(vec2(group*3.0771, group*4.73))))*vec3(1, 7, 1);
     let dir2 = normalize(vec3(rand(vec2(group*6.0771, group*6.73)), rand(vec2(group*7.0771, group*0.73)), rand(vec2(group*5.0771, group*7.73))))*vec3(1, 5.5, 1);
-    let magnitude = max(mix(sqrt((10.5-drawSettings.time%12)/10.5), pow((11.5-drawSettings.time%12)/11.5, 3), 0.5), 0)*min(9*(drawSettings.time%12), 1);
+    let cycleMult = pow(min((drawSettings.time%12), 1), 2)*(1-pow(max((drawSettings.time%12)-11, 0), 2));
+    let magnitude = cycleMult*max(mix(sqrt((11.6-drawSettings.time%12)/11.6), pow((10.5-drawSettings.time%12)/101.5, 3), 0.5), 0)*min(9*(drawSettings.time%12), 1);
     let circularSpeed = rand(vec2(group*0.91771, group*0.993273))*7+0.1;
     let circularDist = rand(vec2(group*1.91771, group*2.193273))*14+4;
     let circular = vec3(sin(drawSettings.time*circularSpeed)*circularDist, 0, cos(drawSettings.time*circularSpeed)*circularDist);
