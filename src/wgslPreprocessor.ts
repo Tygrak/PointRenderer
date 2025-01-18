@@ -36,7 +36,7 @@ export function PreprocessShaderWithFlags(shader: string, flags: string[], print
                 }
                 insideIfnotFlags.splice(insideIfnotFlags.indexOf(match[1]), 1);
             } else if (printWarnings) {
-                console.log("wgslPreprocessor Warning: #endif in line '" + lines[lineNumber] + "' doesn't have a matching starting #if");
+                console.log("wgslPreprocessor Warning: #endifnot in line '" + lines[lineNumber] + "' doesn't have a matching starting #if");
             }
         } else {
             if (!matchesFlags && !lines[lineNumber].match(/^ *\/\//)) {

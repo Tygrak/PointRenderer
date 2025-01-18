@@ -33,18 +33,10 @@ export function CreateViewProjection(aspectRatio = 1.0, cameraPosition:vec3 = [2
     mat4.lookAt(viewMatrix, cameraPosition, center, upDirection);
     mat4.multiply(viewProjectionMatrix, projectionMatrix, viewMatrix);
 
-    const cameraOption = {
-        eye: cameraPosition,
-        center: center,
-        zoomMax: 750,
-        zoomSpeed: 2
-    };
-
     return {
         viewMatrix,
         projectionMatrix,
         viewProjectionMatrix,
-        cameraOption,
         far
     }
 }; 

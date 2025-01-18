@@ -38,8 +38,6 @@ const overlayMessageElement = document.getElementById("overlayMessage") as HTMLP
 let axisMesh: AxisMesh;
 let impostorRenderers: ImpostorRenderer[] = [];
 
-let freeCam = new FreeCamera();
-
 let device: GPUDevice;
 
 async function Initialize() {
@@ -62,16 +60,21 @@ async function Initialize() {
  
     // create uniform data
     const mvpMatrix = mat4.create();
-    let vMatrix = mat4.create();
-    let vpMatrix = mat4.create();
     let cameraPosition = vec3.fromValues(0, 5, 45);
-
-    let vp = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition);
-    vpMatrix = vp.viewProjectionMatrix;
 
     // add rotation and camera:
     let rotation = vec3.fromValues(0, 0, 0);       
-    var camera = createCamera(gpu.canvas, vp.cameraOption);
+    var camera = createCamera(gpu.canvas, 
+        {
+            eye: cameraPosition,
+            center: [0, 0, 0],
+            zoomMax: 750,
+            zoomSpeed: 2
+        }
+    );
+
+    let freeCam = new FreeCamera();
+    //freeCam.used = true;
 
     let dataLoader = new DataLoader(device, gpu.format);
 
@@ -185,10 +188,11 @@ async function Initialize() {
             return;
         }
 
-        let pMatrix = vp.projectionMatrix;
-        if (!freeCam.used && camera.tick()) {
-            vMatrix = camera.matrix;
-            mat4.multiply(vpMatrix, pMatrix, vMatrix);
+        let vp = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
+        if (!freeCam.used) {
+            camera.tick();
+            vp.viewMatrix = camera.matrix;
+            mat4.multiply(vp.viewProjectionMatrix, vp.projectionMatrix, vp.viewMatrix);
         } else if (freeCam.used) {
             freeCam.Update((performance.now()-lastFrameTime)/1000);
         }
@@ -204,20 +208,16 @@ async function Initialize() {
 
         const renderPass = commandEncoder.beginRenderPass(renderPassDescription as GPURenderPassDescriptor);
 
-        let vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
         if (freeCam.used) {
-            vpImpostor = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, freeCam.position, vec3.add(vec3.create(), freeCam.position, freeCam.forward), freeCam.up);
-            vpMatrix = vpImpostor.viewProjectionMatrix;
-            vMatrix = vpImpostor.viewMatrix;
-            pMatrix = vpImpostor.projectionMatrix;
+            vp = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, freeCam.position, vec3.add(vec3.create(), freeCam.position, freeCam.forward), freeCam.up);
             cameraPosition = freeCam.position;
         }
-        let frustum = GetViewFrustum(vMatrix, pMatrix);
+        let frustum = GetViewFrustum(vp.viewMatrix, vp.projectionMatrix);
         let frustumPlanes = frustum.planes;
         
         let rotationMatrix = CreateModelMatrix(mat4.create(), [0,0,0], rotation);
-        rotationMatrix = mat4.mul(rotationMatrix, vpMatrix, rotationMatrix);
-        let vImpostorMatrix = mat4.clone(vpImpostor.viewMatrix);
+        rotationMatrix = mat4.mul(rotationMatrix, vp.viewProjectionMatrix, rotationMatrix);
+        let vImpostorMatrix = mat4.clone(vp.viewProjectionMatrix);
         let drawAmount = 1;
         let sizeScale = parseFloat(sliderImpostorSizeScaleSlider.value);
         let pointsCount = 0;
@@ -243,7 +243,7 @@ async function Initialize() {
         }
         
         if (drawAxesCheckbox.checked) {
-            axisMesh.DrawStructure(renderPass, vpMatrix);
+            axisMesh.DrawStructure(renderPass, vp.viewProjectionMatrix);
         }
 
         renderPass.end();
@@ -284,8 +284,6 @@ async function Initialize() {
     }
     
     function Reinitialize() {
-        vp = CreateViewProjection(gpu.canvas.width/gpu.canvas.height, cameraPosition);
-        vpMatrix = vp.viewProjectionMatrix;
         textureView = gpu.context.getCurrentTexture().createView({label: "MainTextureView"});
         depthTexture = device.createTexture({
             label: "DepthTexture",

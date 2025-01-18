@@ -32,8 +32,8 @@ fn rand(co: vec2<f32>) -> f32 {
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32, @builtin(instance_index) instance: u32, 
            @location(0) pos: vec4<f32>, @location(1) color: vec4<f32>, @location(2) normal: vec3<f32>, @location(3) size: f32) -> VertexOutput {
-    let cameraRight = vec4(1, 0, 0, 0)*vMatrix;
-    let cameraUp = vec4(0, 1, 0, 0)*vMatrix;
+    let cameraRight = vec4(vMatrix[0][0], vMatrix[1][0], vMatrix[2][0], 0);
+    let cameraUp = vec4(vMatrix[0][1], vMatrix[1][1], vMatrix[2][1], 0);
     var output: VertexOutput;
     output.position = pos;
     output.middlePos = pos;
@@ -42,8 +42,8 @@ fn vs_main(@builtin(vertex_index) index: u32, @builtin(instance_index) instance:
     let modelMatrixScale = vec4(length(vec3(mvpMatrix[0][0], mvpMatrix[1][0], mvpMatrix[2][0])), 
                                 length(vec3(mvpMatrix[0][1], mvpMatrix[1][1], mvpMatrix[2][1])), 
                                 length(vec3(mvpMatrix[0][2], mvpMatrix[1][2], mvpMatrix[2][2])), 1);
-    var offsetRight = cameraRight;
-    var offsetUp = cameraUp;
+    var offsetRight = normalize(cameraRight);
+    var offsetUp = normalize(cameraUp);
     if (drawSettings.billboardMode != 1) {
         offsetRight = normalize(vec4(cross(normal, vec3(-normal.x+normal.z*0.1, -normal.y+normal.x*0.1, normal.z+normal.y*0.1)), 0));
         offsetUp = normalize(vec4(cross(normal, offsetRight.xyz), 0));

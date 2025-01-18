@@ -3,12 +3,12 @@ import { vec3, mat4 } from 'gl-matrix';
 
 export class FreeCamera {
     pitch = 0;
-    yaw = Math.PI;
+    yaw = 0;
     lastMousePosX = 0;
     lastMousePosY = 0;
     mouseDown = false;
     used = false;
-    position = vec3.fromValues(0, 0, -10);
+    position = vec3.fromValues(0, 1, -10);
     forward = vec3.fromValues(0, 0, 1);
     up = vec3.fromValues(0, 1, 0);
 
@@ -69,7 +69,8 @@ export class FreeCamera {
         } 
         if (this.downButtonDown) {
             this.position = vec3.subtract(vec3.create(), this.position, vec3.scale(vec3.create(), this.up, this.speed*deltaTime));
-        } 
+        }
+        this.CalculateRotation();
     }
 
     private OnKeyDown(keyEvent: KeyboardEvent, camera: FreeCamera) {
@@ -139,6 +140,7 @@ export class FreeCamera {
     public CalculateRotation() {
         this.forward = vec3.rotateX(vec3.create(), vec3.fromValues(0, 0, 1), vec3.create(), this.pitch);
         this.forward = vec3.rotateY(this.forward, this.forward, vec3.create(), this.yaw);
+        this.forward = vec3.normalize(this.forward, this.forward);
     }
 
     public Initialize(canvas: HTMLCanvasElement) {
