@@ -38,19 +38,25 @@ export class DataLoader {
         }
         if (colors.length == 0 && mesh.attributes["classification"] != undefined) {
             for (let i = 0; i < mesh.attributes["classification"].value.length; i++) {
+                let intensity: number = 1;
+                if (mesh.attributes["intensity"] != undefined && mesh.attributes["intensity"].value.length > i) {
+                    intensity = mesh.attributes["intensity"].value[i]/1500;
+                }
                 let classification = mesh.attributes["classification"].value[i];
                 if (classification == 2) { //Bare-earth and low grass
-                    colors.push(vec3.fromValues(0.15, 0.75, 0.05));
+                    colors.push(vec3.fromValues(0.15*intensity, 0.65+0.3*intensity, 0.05*intensity));
                 } else if (classification == 3) { //Low vegetation (height <2m)
-                    colors.push(vec3.fromValues(0.05, 0.995, 0.05));
+                    colors.push(vec3.fromValues(0.35*intensity, 0.795+0.2*intensity, 0.35*intensity));
                 } else if (classification == 4) { //High vegetation (height >2m)
-                    colors.push(vec3.fromValues(0.45, 0.65, 0.45));
+                    colors.push(vec3.fromValues(0.05*intensity, 0.55+0.2*intensity, 0.05*intensity));
                 } else if (classification == 5) { //Water
-                    colors.push(vec3.fromValues(0.25, 0.25, 0.985));
+                    colors.push(vec3.fromValues(0.25*intensity, 0.25*intensity, 0.785+0.2*intensity));
                 } else if (classification == 6) { //Buildings
-                    colors.push(vec3.fromValues(0.95, 0.95, 0.95));
+                    colors.push(vec3.fromValues(0.6+0.4*intensity, 0.05+0.3*intensity, 0.05+0.3*intensity));
+                } else if (classification == 1) { //unclassified
+                    colors.push(vec3.fromValues(0.35+0.2*intensity, 0.25+0.3*intensity, 0.35+0.2*intensity));
                 } else { //other
-                    colors.push(vec3.fromValues(0.5, 0.5, 0.5));
+                    colors.push(vec3.fromValues(0.15+0.1*intensity, 0.15*intensity, 0.15+0.1*intensity));
                 }
             }
         }
