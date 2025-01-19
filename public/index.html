@@ -65,6 +65,12 @@
                   <option value="2">Quads</option>
                   <option value="3">No Depth Manip</option>
                </select>
+               <button class="collapsible" onclick="ToggleLasOptions(this)">Load Options</button>
+               <div class="content" id="lasOptions">
+                  <label><input id="lasSkipInput" type="number" min="1" max="20" step="1" name="options" value="2" class="bigNumber"> las Skip</label>
+                  <br>
+                  <label><input id="splitThresholdInput" type="number" min="5000" max="1000000" step="5000" name="options" value="500000" class="bigNumber"> Draw Split Threshold</label>
+               </div>
                <button class="collapsible" onclick="ToggleColorOptions(this)">Color Options</button>
                <div class="content" id="colorOptions">
                   <label>
@@ -96,6 +102,12 @@
       function ToggleColorOptions(button){
          button.classList.toggle('active');
          let content = document.getElementById("colorOptions");
+         content.classList.toggle("opened");
+      };
+      
+      function ToggleLasOptions(button){
+         button.classList.toggle('active');
+         let content = document.getElementById("lasOptions");
          content.classList.toggle("opened");
       };
       

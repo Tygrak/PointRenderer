@@ -14,6 +14,7 @@ export class DataLoader {
     MaxTrianglePoints = 5;
     SplitPointsThreshold = 100000;
     DefaultColor = vec3.fromValues(1.0, 1.0, 1.0);
+    LasSkip = 2;
     //NormalizeScale = true;
 
     constructor (device: GPUDevice, format: GPUTextureFormat) {
@@ -22,7 +23,8 @@ export class DataLoader {
     }
 
     public async LoadDataLas(data: ArrayBuffer) {
-        let mesh = await LASLoader.parse(data, {las: {skip: 2}, worker: false});
+        this.LasSkip = Math.max(this.LasSkip, 1);
+        let mesh = await LASLoader.parse(data, {las: {skip: this.LasSkip}, worker: false});
         console.log("las vertex count:" + mesh.header.vertexCount);
         console.log(mesh);
         console.log("las points:" + mesh.attributes["POSITION"].value.length);

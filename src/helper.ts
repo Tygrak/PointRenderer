@@ -154,13 +154,25 @@ export function CreateGPUBufferUint(device:GPUDevice, data:Uint32Array,
 };
 
 export const CreateGPUBuffer = (device:GPUDevice, data:Float32Array, 
-    usageFlag:GPUBufferUsageFlags = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST) => {
+    usageFlag: GPUBufferUsageFlags = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST) => {
     const buffer = device.createBuffer({
         size: data.byteLength,
         usage: usageFlag,
         mappedAtCreation: true
     });
     new Float32Array(buffer.getMappedRange()).set(data);
+    buffer.unmap();
+    return buffer;
+};
+
+export const CreateUintGPUBuffer = (device:GPUDevice, data:Uint8Array, 
+    usageFlag: GPUBufferUsageFlags = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST) => {
+    const buffer = device.createBuffer({
+        size: data.byteLength,
+        usage: usageFlag,
+        mappedAtCreation: true
+    });
+    new Uint8Array(buffer.getMappedRange()).set(data);
     buffer.unmap();
     return buffer;
 };

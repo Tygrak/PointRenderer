@@ -1,5 +1,5 @@
 import { mat4, vec3, vec4 } from "gl-matrix";
-import { CreateGPUBuffer } from "./helper";
+import { CreateGPUBuffer, CreateUintGPUBuffer } from "./helper";
 import { CreateQuadGeometry } from "./meshHelpers";
 import shader from './shaders/impostor.wgsl';
 import { Point } from "./point";
@@ -55,11 +55,11 @@ export class ImpostorRenderer {
                             }]
                         },
                         { //color
-                            arrayStride: 4*3,
+                            arrayStride: 1*4,
                             stepMode: 'instance',
                             attributes: [{
                                 shaderLocation: 1,
-                                format: "float32x3",
+                                format: "unorm8x4",
                                 offset: 0
                             }]
                         },
@@ -176,7 +176,7 @@ export class ImpostorRenderer {
     public LoadPoints(device: GPUDevice, points: Point[]) {
         this.pointsCount = points.length;
         let positions = new Float32Array(this.pointsCount*3);
-        let colors = new Float32Array(this.pointsCount*3);
+        let colors = new Uint8Array(this.pointsCount*4);
         let normals = new Float32Array(this.pointsCount*3);
         let sizes = new Float32Array(this.pointsCount*1);
         let boundsMin = vec3.fromValues(1000000000, 1000000000, 1000000000);
@@ -187,9 +187,10 @@ export class ImpostorRenderer {
             positions[i*3+0] = point.x;
             positions[i*3+1] = point.y;
             positions[i*3+2] = point.z;
-            colors[i*3+0] = quad.color[0];
-            colors[i*3+1] = quad.color[1];
-            colors[i*3+2] = quad.color[2];
+            colors[i*4+0] = quad.color[0]*255;
+            colors[i*4+1] = quad.color[1]*255;
+            colors[i*4+2] = quad.color[2]*255;
+            colors[i*4+3] = 255;
             normals[i*3+0] = point.normal[0];
             normals[i*3+1] = point.normal[1];
             normals[i*3+2] = point.normal[2];
@@ -201,7 +202,7 @@ export class ImpostorRenderer {
         this.aabb = new AABB(boundsMin, boundsMax);
         this.worldAabb = this.aabb.TransformAABB(this.modelMatrix);
         this.quadPositions = CreateGPUBuffer(device, positions);
-        this.quadColors = CreateGPUBuffer(device, colors);
+        this.quadColors = CreateUintGPUBuffer(device, colors);
         this.quadNormals = CreateGPUBuffer(device, normals);
         this.quadSizes = CreateGPUBuffer(device, sizes);
     }

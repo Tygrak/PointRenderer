@@ -28,6 +28,8 @@ const debugSelect = document.getElementById("debugSelect") as HTMLSelectElement;
 const defaultColorRInput = document.getElementById("defaultColorRInput") as HTMLInputElement;
 const defaultColorGInput = document.getElementById("defaultColorGInput") as HTMLInputElement;
 const defaultColorBInput = document.getElementById("defaultColorBInput") as HTMLInputElement;
+const splitThresholdInput = document.getElementById("splitThresholdInput") as HTMLInputElement;
+const lasSkipInput = document.getElementById("lasSkipInput") as HTMLInputElement;
 
 const renderMsElement = document.getElementById("renderMsCounter") as HTMLElement;
 const jsMsCounterElement = document.getElementById("frameMsCounter") as HTMLElement;
@@ -88,6 +90,7 @@ async function Initialize() {
         console.log(dataFileInput.files![0].name);
         dataLoader.MaxTrianglePoints = parseInt(maxPointsSplitSlider.value);
         dataLoader.DefaultColor = vec3.fromValues(parseFloat(defaultColorRInput.value), parseFloat(defaultColorGInput.value), parseFloat(defaultColorBInput.value));
+        dataLoader.SplitPointsThreshold = parseInt(splitThresholdInput.value);
 
         if (dataFileInput.files![0].name.includes(".obj")) {
             LoadData(dataFileInput.files[0], (text: string) => {
@@ -116,6 +119,7 @@ async function Initialize() {
             };
             loadFunc();
         } else if (dataFileInput.files![0].name.includes(".las") || dataFileInput.files![0].name.includes(".laz")) {
+            dataLoader.LasSkip = parseInt(lasSkipInput.value);
             LoadDataArrayBuffer(dataFileInput.files[0], async (buffer: ArrayBuffer) => {
                 impostorRenderers = await dataLoader.LoadDataLas(buffer);
                 let t1 = performance.now();
