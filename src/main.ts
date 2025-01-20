@@ -23,6 +23,8 @@ const maxPointsSplitSlider = document.getElementById("maxPointsSplitSlider") as 
 const drawAxesCheckbox = document.getElementById("drawAxesCheckbox") as HTMLInputElement;
 const normalizeSizeCheckbox = document.getElementById("normalizeSizeCheckbox") as HTMLInputElement;
 const rotateLightCheckbox = document.getElementById("rotateLightCheckbox") as HTMLInputElement;
+const additiveLoadCheckbox = document.getElementById("additiveLoadCheckbox") as HTMLInputElement;
+const moveMeanToOriginCheckbox = document.getElementById("moveMeanToOriginCheckbox") as HTMLInputElement;
 const billboardSelect = document.getElementById("billboardSelect") as HTMLSelectElement;
 const debugSelect = document.getElementById("debugSelect") as HTMLSelectElement;
 const defaultColorRInput = document.getElementById("defaultColorRInput") as HTMLInputElement;
@@ -91,17 +93,26 @@ async function Initialize() {
         dataLoader.MaxTrianglePoints = parseInt(maxPointsSplitSlider.value);
         dataLoader.DefaultColor = vec3.fromValues(parseFloat(defaultColorRInput.value), parseFloat(defaultColorGInput.value), parseFloat(defaultColorBInput.value));
         dataLoader.SplitPointsThreshold = parseInt(splitThresholdInput.value);
+        dataLoader.MoveMeanToOrigin = moveMeanToOriginCheckbox.checked;
 
         if (dataFileInput.files![0].name.includes(".obj")) {
             LoadData(dataFileInput.files[0], (text: string) => {
-                impostorRenderers = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
+                if (additiveLoadCheckbox.checked) {
+                    impostorRenderers.push(...dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked));
+                } else {
+                    impostorRenderers = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
+                }
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".ply")) {
             LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
-                impostorRenderers = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
+                if (additiveLoadCheckbox.checked) {
+                    impostorRenderers.push(...dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked));
+                } else {
+                    impostorRenderers = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
+                }
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
@@ -112,7 +123,11 @@ async function Initialize() {
                 filemap.set(dataFileInput.files[i].name, dataFileInput.files[i]);
             }
             let loadFunc = async () => {
-                impostorRenderers = await dataLoader.LoadDataGltfFile(filemap);
+                if (additiveLoadCheckbox.checked) {
+                    impostorRenderers.push(...await dataLoader.LoadDataGltfFile(filemap));
+                } else {
+                    impostorRenderers = await dataLoader.LoadDataGltfFile(filemap);
+                }
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
@@ -121,7 +136,11 @@ async function Initialize() {
         } else if (dataFileInput.files![0].name.includes(".las") || dataFileInput.files![0].name.includes(".laz")) {
             dataLoader.LasSkip = parseInt(lasSkipInput.value);
             LoadDataArrayBuffer(dataFileInput.files[0], async (buffer: ArrayBuffer) => {
-                impostorRenderers = await dataLoader.LoadDataLas(buffer);
+                if (additiveLoadCheckbox.checked) {
+                    impostorRenderers.push(...await dataLoader.LoadDataLas(buffer));
+                } else {
+                    impostorRenderers = await dataLoader.LoadDataLas(buffer);
+                }
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");

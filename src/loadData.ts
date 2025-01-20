@@ -15,6 +15,7 @@ export class DataLoader {
     SplitPointsThreshold = 100000;
     DefaultColor = vec3.fromValues(1.0, 1.0, 1.0);
     LasSkip = 2;
+    MoveMeanToOrigin = true;
     //NormalizeScale = true;
 
     constructor (device: GPUDevice, format: GPUTextureFormat) {
@@ -26,44 +27,52 @@ export class DataLoader {
         this.LasSkip = Math.max(this.LasSkip, 1);
         let mesh = await LASLoader.parse(data, {las: {skip: this.LasSkip}, worker: false});
         console.log("las vertex count:" + mesh.header.vertexCount);
-        console.log(mesh);
+        //console.log(mesh);
         console.log("las points:" + mesh.attributes["POSITION"].value.length);
-        let vertices: vec3[] = [];
-        let colors: vec3[] = [];
-        for (let i = 0; i < mesh.attributes["POSITION"].value.length; i+=3) {
-            vertices.push(vec3.fromValues(mesh.attributes["POSITION"].value[i], mesh.attributes["POSITION"].value[i+2], mesh.attributes["POSITION"].value[i+1]));
-        }
-        if (mesh.attributes["COLOR_0"] != undefined) {
-            for (let i = 0; i < mesh.attributes["COLOR_0"].value.length; i+=4) {
-                colors.push(vec3.fromValues(mesh.attributes["COLOR_0"].value[i]/255, mesh.attributes["COLOR_0"].value[i+1]/255, mesh.attributes["COLOR_0"].value[i+2]/255));
+        let parts = Math.max(Math.ceil(mesh.header.vertexCount/1000000), 1);
+        let renderers: ImpostorRenderer[] = [];
+        let aabb = new AABB(vec3.fromValues(mesh.header.boundingBox[0][0], mesh.header.boundingBox[0][1], mesh.header.boundingBox[0][2]), 
+                            vec3.fromValues(mesh.header.boundingBox[1][0], mesh.header.boundingBox[1][1], mesh.header.boundingBox[1][2]));
+        let c = aabb.center;
+        for (let part = 0; part < parts; part++) {
+            let vertices: vec3[] = [];
+            let colors: vec3[] = [];
+            for (let v = part*1000000; v < Math.min((part+1)*1000000, mesh.header.vertexCount); v++) {
+                vertices.push(vec3.fromValues(mesh.attributes["POSITION"].value[v*3]-c[0], mesh.attributes["POSITION"].value[v*3+2]-c[2], mesh.attributes["POSITION"].value[v*3+1]-c[1]));
+                if (mesh.attributes["COLOR_0"] != undefined) {
+                    colors.push(vec3.fromValues(mesh.attributes["COLOR_0"].value[v*4]/255, mesh.attributes["COLOR_0"].value[v*4+1]/255, mesh.attributes["COLOR_0"].value[v*4+2]/255));
+                }
+                if (colors.length < v && mesh.attributes["classification"] != undefined) {
+                    let intensity: number = 1;
+                    if (mesh.attributes["intensity"] != undefined && mesh.attributes["intensity"].value.length > v) {
+                        intensity = mesh.attributes["intensity"].value[v]/1500;
+                    }
+                    let classification = mesh.attributes["classification"].value[v];
+                    if (classification == 2) { //Bare-earth and low grass
+                        colors.push(vec3.fromValues(0.15*intensity, 0.65+0.3*intensity, 0.05*intensity));
+                    } else if (classification == 3) { //Low vegetation (height <2m)
+                        colors.push(vec3.fromValues(0.35*intensity, 0.795+0.2*intensity, 0.35*intensity));
+                    } else if (classification == 4) { //High vegetation (height >2m)
+                        colors.push(vec3.fromValues(0.05*intensity, 0.55+0.2*intensity, 0.05*intensity));
+                    } else if (classification == 5) { //Water
+                        colors.push(vec3.fromValues(0.25*intensity, 0.25*intensity, 0.785+0.2*intensity));
+                    } else if (classification == 6) { //Buildings
+                        colors.push(vec3.fromValues(0.25+0.4*intensity, 0.05+0.3*intensity, 0.05+0.3*intensity));
+                    } else if (classification == 1) { //unclassified
+                        colors.push(vec3.fromValues(0.35+0.2*intensity, 0.25+0.3*intensity, 0.35+0.2*intensity));
+                    } else { //other
+                        colors.push(vec3.fromValues(0.15+0.1*intensity, 0.15*intensity, 0.15+0.1*intensity));
+                    }
+                }
+            }
+            let points = this.GetPointsFromVerticesAndNormals(vertices, [], false, false, colors);
+            let groups = this.MakeGroupRenderersFromPoints(points);
+            for (let group = 0; group < groups.length; group++) {
+                renderers.push(groups[group]);
             }
         }
-        if (colors.length == 0 && mesh.attributes["classification"] != undefined) {
-            for (let i = 0; i < mesh.attributes["classification"].value.length; i++) {
-                let intensity: number = 1;
-                if (mesh.attributes["intensity"] != undefined && mesh.attributes["intensity"].value.length > i) {
-                    intensity = mesh.attributes["intensity"].value[i]/1500;
-                }
-                let classification = mesh.attributes["classification"].value[i];
-                if (classification == 2) { //Bare-earth and low grass
-                    colors.push(vec3.fromValues(0.15*intensity, 0.65+0.3*intensity, 0.05*intensity));
-                } else if (classification == 3) { //Low vegetation (height <2m)
-                    colors.push(vec3.fromValues(0.35*intensity, 0.795+0.2*intensity, 0.35*intensity));
-                } else if (classification == 4) { //High vegetation (height >2m)
-                    colors.push(vec3.fromValues(0.05*intensity, 0.55+0.2*intensity, 0.05*intensity));
-                } else if (classification == 5) { //Water
-                    colors.push(vec3.fromValues(0.25*intensity, 0.25*intensity, 0.785+0.2*intensity));
-                } else if (classification == 6) { //Buildings
-                    colors.push(vec3.fromValues(0.6+0.4*intensity, 0.05+0.3*intensity, 0.05+0.3*intensity));
-                } else if (classification == 1) { //unclassified
-                    colors.push(vec3.fromValues(0.35+0.2*intensity, 0.25+0.3*intensity, 0.35+0.2*intensity));
-                } else { //other
-                    colors.push(vec3.fromValues(0.15+0.1*intensity, 0.15*intensity, 0.15+0.1*intensity));
-                }
-            }
-        }
-        let points = this.GetPointsFromVerticesAndNormals(vertices, [], true, false, colors);
-        return this.MakeGroupRenderersFromPoints(points);
+        
+        return renderers;
     }
 
     public async LoadDataGltfFile(filemap: Map<string, File>) {
@@ -225,7 +234,7 @@ export class DataLoader {
             }
         }
 
-        let points = this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize);
+        let points = this.GetPointsFromVerticesAndIndices(vertices, faces, this.MoveMeanToOrigin, normalizeSize);
         return this.MakeGroupRenderersFromPoints(points);
     }
 
@@ -251,9 +260,9 @@ export class DataLoader {
             for (let i = 0; i < result.normals.length; i=i+3) {
                 normals.push(vec3.fromValues(result.normals[i], result.normals[i+1], result.normals[i+2]));
             }
-            points = this.GetPointsFromVerticesAndNormals(vertices, normals, true, normalizeSize, colors);
+            points = this.GetPointsFromVerticesAndNormals(vertices, normals, this.MoveMeanToOrigin, normalizeSize, colors);
         } else {
-            points = this.GetPointsFromVerticesAndIndices(vertices, faces, true, normalizeSize, colors);
+            points = this.GetPointsFromVerticesAndIndices(vertices, faces, this.MoveMeanToOrigin, normalizeSize, colors);
         }
 
         return this.MakeGroupRenderersFromPoints(points);
