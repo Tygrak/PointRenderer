@@ -1,4 +1,4 @@
-import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData, LoadDataArrayBuffer, GetViewFrustum, CreateImpostorRendererFromVectors, CreateImpostorRendererFromPoints} from './helper';
+import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData as LoadDataString, LoadDataArrayBuffer, GetViewFrustum, CreateImpostorRendererFromVectors, CreateImpostorRendererFromPoints} from './helper';
 import shader from './shaders/basic.wgsl';
 import { vec3, vec4, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
@@ -30,6 +30,9 @@ const debugSelect = document.getElementById("debugSelect") as HTMLSelectElement;
 const defaultColorRInput = document.getElementById("defaultColorRInput") as HTMLInputElement;
 const defaultColorGInput = document.getElementById("defaultColorGInput") as HTMLInputElement;
 const defaultColorBInput = document.getElementById("defaultColorBInput") as HTMLInputElement;
+const loadOffsetXInput = document.getElementById("loadOffsetXInput") as HTMLInputElement;
+const loadOffsetYInput = document.getElementById("loadOffsetYInput") as HTMLInputElement;
+const loadOffsetZInput = document.getElementById("loadOffsetZInput") as HTMLInputElement;
 const splitThresholdInput = document.getElementById("splitThresholdInput") as HTMLInputElement;
 const lasSkipInput = document.getElementById("lasSkipInput") as HTMLInputElement;
 
@@ -96,23 +99,15 @@ async function Initialize() {
         dataLoader.MoveMeanToOrigin = moveMeanToOriginCheckbox.checked;
 
         if (dataFileInput.files![0].name.includes(".obj")) {
-            LoadData(dataFileInput.files[0], (text: string) => {
-                if (additiveLoadCheckbox.checked) {
-                    impostorRenderers.push(...dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked));
-                } else {
-                    impostorRenderers = dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked);
-                }
+            LoadDataString(dataFileInput.files[0], (text: string) => {
+                AddNewRenderers(dataLoader.LoadDataObj(text, 1, normalizeSizeCheckbox.checked));
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             });
         } else if (dataFileInput.files![0].name.includes(".ply")) {
             LoadDataArrayBuffer(dataFileInput.files[0], (buffer: ArrayBuffer) => {
-                if (additiveLoadCheckbox.checked) {
-                    impostorRenderers.push(...dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked));
-                } else {
-                    impostorRenderers = dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked);
-                }
+                AddNewRenderers(dataLoader.LoadDataPly(buffer, 1, normalizeSizeCheckbox.checked));
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
@@ -123,11 +118,7 @@ async function Initialize() {
                 filemap.set(dataFileInput.files[i].name, dataFileInput.files[i]);
             }
             let loadFunc = async () => {
-                if (additiveLoadCheckbox.checked) {
-                    impostorRenderers.push(...await dataLoader.LoadDataGltfFile(filemap));
-                } else {
-                    impostorRenderers = await dataLoader.LoadDataGltfFile(filemap);
-                }
+                AddNewRenderers(await dataLoader.LoadDataGltfFile(filemap));
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
@@ -136,17 +127,25 @@ async function Initialize() {
         } else if (dataFileInput.files![0].name.includes(".las") || dataFileInput.files![0].name.includes(".laz")) {
             dataLoader.LasSkip = parseInt(lasSkipInput.value);
             LoadDataArrayBuffer(dataFileInput.files[0], async (buffer: ArrayBuffer) => {
-                if (additiveLoadCheckbox.checked) {
-                    impostorRenderers.push(...await dataLoader.LoadDataLas(buffer));
-                } else {
-                    impostorRenderers = await dataLoader.LoadDataLas(buffer);
-                }
+                AddNewRenderers(await dataLoader.LoadDataLas(buffer));
                 let t1 = performance.now();
                 console.log("Loading data from file (" + dataFileInput.files![0].name + "): " + (t1-t0) + "ms");
                 console.log("(" + impostorRenderers.reduce((a, b) => {return a+b.pointsCount;}, 0) + " points)");
             });
         }
     };
+
+    function AddNewRenderers(renderers: ImpostorRenderer[]) {
+        let translation = vec3.fromValues(parseFloat(loadOffsetXInput.value), parseFloat(loadOffsetYInput.value), parseFloat(loadOffsetZInput.value));
+        for (let i = 0; i < renderers.length; i++) {
+            renderers[i].SetModelMatrix(mat4.translate(renderers[i].modelMatrix, renderers[i].modelMatrix, translation));
+        }
+        if (additiveLoadCheckbox.checked) {
+            impostorRenderers.push(...renderers);
+        } else {
+            impostorRenderers = renderers;
+        }
+    }
 
     let textureView = gpu.context.getCurrentTexture().createView();
     let depthTexture = device.createTexture({
