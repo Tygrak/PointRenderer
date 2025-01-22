@@ -177,6 +177,10 @@ export const CreateUintGPUBuffer = (device:GPUDevice, data:Uint8Array,
     return buffer;
 };
 
+export function ToRadians(angleDegrees: number) {
+    return angleDegrees * (Math.PI/180);
+}
+
 export async function InitGPU(fixedCanvas: boolean) {
     CheckWebGPU();
     InitCanvas(fixedCanvas);

@@ -1,4 +1,4 @@
-import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData as LoadDataString, LoadDataArrayBuffer, GetViewFrustum, CreateImpostorRendererFromVectors, CreateImpostorRendererFromPoints} from './helper';
+import { InitGPU, CreateGPUBuffer, CreateModelMatrix, CreateViewProjection, CreateTimestampBuffer, LoadData as LoadDataString, LoadDataArrayBuffer, GetViewFrustum, CreateImpostorRendererFromVectors, CreateImpostorRendererFromPoints, ToRadians} from './helper';
 import shader from './shaders/basic.wgsl';
 import { vec3, vec4, mat4 } from 'gl-matrix';
 import $, { data } from 'jquery';
@@ -33,6 +33,12 @@ const defaultColorBInput = document.getElementById("defaultColorBInput") as HTML
 const loadOffsetXInput = document.getElementById("loadOffsetXInput") as HTMLInputElement;
 const loadOffsetYInput = document.getElementById("loadOffsetYInput") as HTMLInputElement;
 const loadOffsetZInput = document.getElementById("loadOffsetZInput") as HTMLInputElement;
+const loadRotationXInput = document.getElementById("loadRotationXInput") as HTMLInputElement;
+const loadRotationYInput = document.getElementById("loadRotationYInput") as HTMLInputElement;
+const loadRotationZInput = document.getElementById("loadRotationZInput") as HTMLInputElement;
+const loadScaleXInput = document.getElementById("loadScaleXInput") as HTMLInputElement;
+const loadScaleYInput = document.getElementById("loadScaleYInput") as HTMLInputElement;
+const loadScaleZInput = document.getElementById("loadScaleZInput") as HTMLInputElement;
 const splitThresholdInput = document.getElementById("splitThresholdInput") as HTMLInputElement;
 const lasSkipInput = document.getElementById("lasSkipInput") as HTMLInputElement;
 
@@ -137,8 +143,16 @@ async function Initialize() {
 
     function AddNewRenderers(renderers: ImpostorRenderer[]) {
         let translation = vec3.fromValues(parseFloat(loadOffsetXInput.value), parseFloat(loadOffsetYInput.value), parseFloat(loadOffsetZInput.value));
+        let rotation = vec3.fromValues(parseFloat(loadRotationXInput.value), parseFloat(loadRotationYInput.value), parseFloat(loadRotationZInput.value));
+        let scale = vec3.fromValues(parseFloat(loadScaleXInput.value), parseFloat(loadScaleYInput.value), parseFloat(loadScaleZInput.value));
         for (let i = 0; i < renderers.length; i++) {
-            renderers[i].SetModelMatrix(mat4.translate(renderers[i].modelMatrix, renderers[i].modelMatrix, translation));
+            let modelMat = mat4.translate(renderers[i].modelMatrix, renderers[i].modelMatrix, translation);
+            mat4.rotateZ(modelMat, modelMat, ToRadians(rotation[2]));
+            mat4.rotateY(modelMat, modelMat, ToRadians(rotation[1]));
+            mat4.rotateX(modelMat, modelMat, ToRadians(rotation[0]));
+            mat4.scale(modelMat, modelMat, scale);
+            
+            renderers[i].SetModelMatrix(modelMat);
         }
         if (additiveLoadCheckbox.checked) {
             impostorRenderers.push(...renderers);
@@ -362,7 +376,7 @@ async function Initialize() {
         document.addEventListener('keypress', function(keyEvent: KeyboardEvent) {
             if (keyEvent.code == "KeyC") {
                 if (!freeCam.used) {
-                    freeCam.position = camera.eye;
+                    freeCam.position = vec3.fromValues(camera.eye[0], camera.eye[1], camera.eye[2]);
                     freeCam.CalculateRotation();
                     //freeCam.forward = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), camera.center, camera.eye));
                     //freeCam.forward[1] = 0;
