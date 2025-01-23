@@ -377,9 +377,8 @@ async function Initialize() {
             if (keyEvent.code == "KeyC") {
                 if (!freeCam.used) {
                     freeCam.position = vec3.fromValues(camera.eye[0], camera.eye[1], camera.eye[2]);
-                    freeCam.CalculateRotation();
-                    //freeCam.forward = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), camera.center, camera.eye));
-                    //freeCam.forward[1] = 0;
+                    let center = vec3.fromValues(camera.center[0], camera.center[1], camera.center[2]);
+                    freeCam.LookAt(center);
                 }
                 freeCam.used = !freeCam.used;
             } else if (keyEvent.code == "Numpad1") {

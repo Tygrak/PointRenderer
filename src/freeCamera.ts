@@ -137,6 +137,14 @@ export class FreeCamera {
         } 
     }
 
+    public LookAt(center: vec3) {
+        let dir = vec3.subtract(vec3.create(), this.position, center);
+        vec3.normalize(dir, dir);
+        this.pitch = Math.asin(dir[1]);
+        this.yaw = Math.atan2(dir[0], dir[2])-Math.PI;
+        this.CalculateRotation();
+    }
+
     public CalculateRotation() {
         this.forward = vec3.rotateX(vec3.create(), vec3.fromValues(0, 0, 1), vec3.create(), this.pitch);
         this.forward = vec3.rotateY(this.forward, this.forward, vec3.create(), this.yaw);
